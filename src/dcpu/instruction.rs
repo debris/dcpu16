@@ -1,3 +1,4 @@
+use std::fmt::{self, Formatter, Display};
 
 /// check if nth bit is written and rewrite it to result
 /// start is value in range 0 to 15
@@ -9,19 +10,36 @@ fn get_bits_in_range(word: u16, start: u8, length: u8) -> u16 {
     result
 }
 
+#[derive(Debug)]
+pub enum Opcode {
+    SET,
+    ADD,
+
+    NULL
+}
+
+fn to_opcode(special: bool, bits: u8) -> Opcode {
+    match (special, bits) {
+        (false, 0x1) => Opcode::SET,
+        (false, 0x2) => Opcode::ADD,
+        _ => Opcode::NULL
+    }
+}
+
 pub struct Instruction(pub u16);
 
 impl Instruction {
     pub fn is_special(&self) -> bool {
-        self.opcode() == 0u8
+        get_bits_in_range(self.0, 0, 5) == 0
     }
 
-    pub fn opcode(&self) -> u8 {
-        get_bits_in_range(self.0, 0, 5) as u8
-    }
-
-    pub fn special_opcode(&self) -> u8 {
-        get_bits_in_range(self.0, 5, 5) as u8
+    pub fn opcode(&self) -> Opcode {
+        let special = self.is_special();
+        let bits = match special {
+            false => get_bits_in_range(self.0, 0, 5) as u8,
+            true => get_bits_in_range(self.0, 5, 5) as u8
+        };
+        to_opcode(special, bits)
     }
 
     pub fn a(&self) -> u8 {
@@ -30,6 +48,16 @@ impl Instruction {
 
     pub fn b(&self) -> u8 {
         get_bits_in_range(self.0, 5, 5) as u8
+    }
+}
+
+impl Display for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_special() {
+            write!(f, "special, op: {:?}, a: 0x{:x}", self.opcode(), self.a())
+        } else {
+            write!(f, "normal, op: {:?}, a: 0x{:x}, b: 0x{:x}", self.opcode(), self.a(), self.b())
+        }
     }
 }
 
@@ -42,23 +70,21 @@ fn test_is_special() {
 }
 
 #[test]
-fn special_opcode() {
-    let i = Instruction(0b000011_00001_00000);
-    assert_eq!(0b1u8, i.special_opcode());
-}
-
-#[test]
 fn test_opcode() {
     let i = Instruction(0x7c01);
-    let expected = 0b1u8; // SET
-    assert_eq!(expected, i.opcode());
+    let i2 = Instruction(0b000011_00001_00000);
+    //assert_eq!(Opcode::SET, i.opcode());
+    //assert_eq!(Opcode::SET, i2.opcode());
 }
 
 #[test]
 fn test_a() {
     let i = Instruction(0x7c01);
-    let expected = 0b11111u8; // 011111 = 1F = next word -> [PC++]
-    assert_eq!(expected, i.a());
+    let i2 = Instruction(0b111111_00000_00001);
+    let i3 = Instruction(0xfc01);
+    assert_eq!(0b11111, i.a()); // 011111 = 1F = next word -> [PC++]
+    assert_eq!(0b111111, i2.a()); // 111111 = 
+    assert_eq!(0b111111, i3.a()); // 111111 = 
 }
 
 #[test]
