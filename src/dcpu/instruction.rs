@@ -5,7 +5,7 @@ use std::fmt::{self, Formatter, Display};
 fn get_bits_in_range(word: u16, start: u8, length: u8) -> u16 {
     let mut result: u16 = 0;
     for n in start..(start+length) {
-        result |= (((word >> n) & 1) << (n - start));
+        result |= ((word >> n) & 1) << (n - start);
     }
     result
 }
@@ -14,6 +14,9 @@ fn get_bits_in_range(word: u16, start: u8, length: u8) -> u16 {
 pub enum Opcode {
     SET,
     ADD,
+    SUB,
+
+    JSR,
 
     NULL
 }
@@ -22,6 +25,8 @@ fn to_opcode(special: bool, bits: u8) -> Opcode {
     match (special, bits) {
         (false, 0x1) => Opcode::SET,
         (false, 0x2) => Opcode::ADD,
+        (false, 0x3) => Opcode::SUB,
+        (true,  0x1) => Opcode::JSR,
         _ => Opcode::NULL
     }
 }
@@ -71,8 +76,8 @@ fn test_is_special() {
 
 #[test]
 fn test_opcode() {
-    let i = Instruction(0x7c01);
-    let i2 = Instruction(0b000011_00001_00000);
+    //let i = Instruction(0x7c01);
+    //let i2 = Instruction(0b000011_00001_00000);
     //assert_eq!(Opcode::SET, i.opcode());
     //assert_eq!(Opcode::SET, i2.opcode());
 }
