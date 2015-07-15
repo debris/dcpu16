@@ -24,6 +24,9 @@ pub enum Opcode {
     AND,
     BOR,
     XOR,
+    SHR,
+    ASR,
+    SHL,
 
 
     JSR,
@@ -45,6 +48,9 @@ fn to_opcode(special: bool, bits: u8) -> Opcode {
         (false, 0xa) => Opcode::AND,
         (false, 0xb) => Opcode::BOR,
         (false, 0xc) => Opcode::XOR,
+        (false, 0xd) => Opcode::SHR,
+        (false, 0xe) => Opcode::ASR,
+        (false, 0xf) => Opcode::SHL,
         (true,  0x1) => Opcode::JSR,
         _ => Opcode::NULL
     }

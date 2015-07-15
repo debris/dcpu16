@@ -136,6 +136,21 @@ impl Dcpu {
                     let vb = self.get_value(b);
                     self.set_value(b, vb ^ va); 
                 },
+                Opcode::SHR => {                // TODO: EX, unsigned
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    self.set_value(b, vb >> va); 
+                },
+                Opcode::ASR => {                // TODO: EX, signed
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    self.set_value(b, vb >> va); 
+                },
+                Opcode::SHL => {
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    self.set_value(b, vb << va); 
+                },
                 Opcode::JSR => {
                     let va = self.get_value(a);
                     let address = self.pc + 1;
@@ -366,6 +381,42 @@ fn test_xor() {
     ]);
     cpu.process(); 
     assert_eq!(cpu.registers[0], 6);
+    assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_shr() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0xa001,    // SET A, 7
+             0x880d     // SHR A, 1
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 3);
+    assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_asr() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0xa001,    // SET A, 7
+             0x880e     // ASR A, 1
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 3);
+    assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_shl() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0xa001,    // SET A, 7
+             0x880f     // SHL A, 1
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 14);
     assert_eq!(cpu.pc, 2);
 }
 
