@@ -246,11 +246,25 @@ impl Dcpu {
         match addr {
             n @ 0x0 ... 0x7 => self.registers[n as usize],
             n @ 0x8 ... 0xf => self.memory.get(self.registers[(n - 0x8) as usize] as usize),
+            n @ 0x10 ... 0x17 => {
+                let v = self.memory.get(self.registers[(n - 0x10) as usize] as usize);
+                let word = self.read_word();
+                self.memory.get(v.wrapping_add(word) as usize) as Value
+            },
             0x18 => self.pop(),
             0x19 => self.memory.get(self.sp as usize), // peek
+            0x1a => {
+                let sp = self.sp;
+                let word = self.read_word();
+                self.memory.get(sp.wrapping_add(word) as usize) as Value
+            },
             0x1b => self.sp,
             0x1c => self.pc,
             0x1d => self.ex,
+            0x1e => {                                   // TODO: test
+                let word = self.read_word() as usize;
+                self.memory.get(word) as Value
+            },
             0x1f => self.read_word() as Value,
             n @ 0x20 ... 0x3f => ((n as Value).wrapping_sub(0x21)),
             _ => 0
