@@ -31,6 +31,10 @@ pub enum Opcode {
     IFC,
     IFE,
     IFN,
+    IFG,
+    IFA,
+    IFL,
+    IFU,
 
     JSR,
 
@@ -58,6 +62,10 @@ fn to_opcode(special: bool, bits: u8) -> Opcode {
         (false, 0x11) => Opcode::IFC,
         (false, 0x12) => Opcode::IFE,
         (false, 0x13) => Opcode::IFN,
+        (false, 0x14) => Opcode::IFG,
+        (false, 0x15) => Opcode::IFA,
+        (false, 0x16) => Opcode::IFL,
+        (false, 0x17) => Opcode::IFU,
         (true,  0x1) => Opcode::JSR,
         _ => Opcode::NULL
     }

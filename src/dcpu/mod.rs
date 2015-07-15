@@ -179,6 +179,34 @@ impl Dcpu {
                         self.pc = self.pc + 1;
                     }
                 },
+                Opcode::IFG => {
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    if !(vb > va) {
+                        self.pc = self.pc + 1;
+                    }
+                },
+                Opcode::IFA => {                // TODO: signed
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    if !(vb > va) {
+                        self.pc = self.pc + 1;
+                    }
+                },
+                Opcode::IFL => {
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    if !(vb < va) {
+                        self.pc = self.pc + 1;
+                    }
+                },
+                Opcode::IFU => {                // TODO: signed
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    if !(vb < va) {
+                        self.pc = self.pc + 1;
+                    }
+                },
                 Opcode::JSR => {
                     let va = self.get_value(a);
                     let address = self.pc + 1;
@@ -504,6 +532,70 @@ fn test_ifn() {
              0x8c13,    // IFN A, 2
              0x8c01,    // SET A, 2
              0x8c13,    // IFN A, 2
+             0x8821     // SET B, 1
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 2);
+    assert_eq!(cpu.registers[1], 0);
+    assert_eq!(cpu.pc, 5);
+}
+
+#[test]
+fn test_ifg() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x8c01,    // SET A, 2
+             0x8814,    // IFG A, 1
+             0x8801,    // SET A, 1
+             0x8814,    // IFG A, 1
+             0x8821     // SET B, 1
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 1);
+    assert_eq!(cpu.registers[1], 0);
+    assert_eq!(cpu.pc, 5);
+}
+
+#[test]
+fn test_ifa() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x8c01,    // SET A, 2
+             0x8815,    // IFA A, 1
+             0x8801,    // SET A, 1
+             0x8815,    // IFA A, 1
+             0x8821     // SET B, 1
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 1);
+    assert_eq!(cpu.registers[1], 0);
+    assert_eq!(cpu.pc, 5);
+}
+
+#[test]
+fn test_ifl() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x8801,    // SET A, 1
+             0x8c16,    // IFL A, 2
+             0x8c01,    // SET A, 2
+             0x8c16,    // IFL A, 2
+             0x8821     // SET B, 1
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 2);
+    assert_eq!(cpu.registers[1], 0);
+    assert_eq!(cpu.pc, 5);
+}
+
+#[test]
+fn test_ifu() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x8801,    // SET A, 1
+             0x8c17,    // IFU A, 2
+             0x8c01,    // SET A, 2
+             0x8c17,    // IFU A, 2
              0x8821     // SET B, 1
     ]);
     cpu.process(); 
