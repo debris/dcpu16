@@ -207,6 +207,30 @@ impl Dcpu {
                         self.pc = self.pc + 1;
                     }
                 },
+                Opcode::ADX => {                // TODO: EX, test
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    let ex = self.ex;
+                    self.set_value(b, vb.wrapping_add(va).wrapping_add(ex));
+                },
+                Opcode::SBX => {                // TODO: EX, test
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    let ex = self.ex;
+                    self.set_value(b, vb.wrapping_sub(va).wrapping_add(ex));
+                },
+                Opcode::STI => {
+                    let va = self.get_value(a);
+                    self.set_value(b, va);
+                    self.registers[6] = self.registers[6].wrapping_add(1);
+                    self.registers[7] = self.registers[7].wrapping_add(1);
+                },
+                Opcode::STD => {
+                    let va = self.get_value(a);
+                    self.set_value(b, va);
+                    self.registers[6] = self.registers[6].wrapping_sub(1);
+                    self.registers[7] = self.registers[7].wrapping_sub(1);
+                },
                 Opcode::JSR => {
                     let va = self.get_value(a);
                     let address = self.pc + 1;
@@ -602,5 +626,31 @@ fn test_ifu() {
     assert_eq!(cpu.registers[0], 2);
     assert_eq!(cpu.registers[1], 0);
     assert_eq!(cpu.pc, 5);
+}
+
+#[test]
+fn test_sti() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0xc01e     // STI A, 15
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 15);
+    assert_eq!(cpu.registers[6], 1);
+    assert_eq!(cpu.registers[7], 1);
+    assert_eq!(cpu.pc, 1);
+}
+
+#[test]
+fn test_std() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0xc01f     // STD A, 15
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 15);
+    assert_eq!(cpu.registers[6], 0xffff);
+    assert_eq!(cpu.registers[7], 0xffff);
+    assert_eq!(cpu.pc, 1);
 }
 
