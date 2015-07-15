@@ -151,6 +151,20 @@ impl Dcpu {
                     let vb = self.get_value(b);
                     self.set_value(b, vb << va); 
                 },
+                Opcode::IFB => {
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    if (vb & va) == 0 {
+                        self.pc = self.pc + 1;
+                    }
+                },
+                Opcode::IFC => {
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    if (vb & va) != 0 {
+                        self.pc = self.pc + 1;
+                    }
+                },
                 Opcode::JSR => {
                     let va = self.get_value(a);
                     let address = self.pc + 1;
@@ -418,5 +432,37 @@ fn test_shl() {
     cpu.process(); 
     assert_eq!(cpu.registers[0], 14);
     assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_ifb() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x8801,    // SET A, 1
+             0x9010,    // IFB A, 3
+             0x8c01,    // SET A, 2
+             0x8810,    // IFB A, 1
+             0x8821     // SET B, 1
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 2);
+    assert_eq!(cpu.registers[1], 0);
+    assert_eq!(cpu.pc, 5);
+}
+
+#[test]
+fn test_ifc() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x8801,    // SET A, 1
+             0x9011,    // IFC A, 3
+             0x8c01,    // SET A, 2
+             0x8c11,    // IFC A, 2
+             0x8821     // SET B, 1
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 1);
+    assert_eq!(cpu.registers[1], 1);
+    assert_eq!(cpu.pc, 5);
 }
 

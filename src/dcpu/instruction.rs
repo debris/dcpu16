@@ -27,7 +27,8 @@ pub enum Opcode {
     SHR,
     ASR,
     SHL,
-
+    IFB,
+    IFC,
 
     JSR,
 
@@ -51,6 +52,8 @@ fn to_opcode(special: bool, bits: u8) -> Opcode {
         (false, 0xd) => Opcode::SHR,
         (false, 0xe) => Opcode::ASR,
         (false, 0xf) => Opcode::SHL,
+        (false, 0x10) => Opcode::IFB,
+        (false, 0x11) => Opcode::IFC,
         (true,  0x1) => Opcode::JSR,
         _ => Opcode::NULL
     }
