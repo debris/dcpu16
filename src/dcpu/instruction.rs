@@ -20,6 +20,10 @@ pub enum Opcode {
     DIV,
     DVI,
     MOD,
+    MDI,
+    AND,
+    BOR,
+    XOR,
 
 
     JSR,
@@ -37,6 +41,10 @@ fn to_opcode(special: bool, bits: u8) -> Opcode {
         (false, 0x6) => Opcode::DIV,
         (false, 0x7) => Opcode::DVI,
         (false, 0x8) => Opcode::MOD,
+        (false, 0x9) => Opcode::MDI,
+        (false, 0xa) => Opcode::AND,
+        (false, 0xb) => Opcode::BOR,
+        (false, 0xc) => Opcode::XOR,
         (true,  0x1) => Opcode::JSR,
         _ => Opcode::NULL
     }

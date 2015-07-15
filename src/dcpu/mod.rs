@@ -113,6 +113,29 @@ impl Dcpu {
                         _ => self.set_value(b, vb % va)
                     };
                 },
+                Opcode::MDI => {
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    match va {
+                        0 => self.set_value(b, 0),
+                        _ => self.set_value(b, vb % va)
+                    };
+                },
+                Opcode::AND => {
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    self.set_value(b, vb & va); 
+                },
+                Opcode::BOR => {
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    self.set_value(b, vb | va); 
+                },
+                Opcode::XOR => {
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    self.set_value(b, vb ^ va); 
+                },
                 Opcode::JSR => {
                     let va = self.get_value(a);
                     let address = self.pc + 1;
@@ -279,7 +302,7 @@ fn test_dvi() {
     let mut cpu: Dcpu = Default::default();
     cpu.load(&[
              0x9801,    // SET A, 5
-             0x8c07     // DIV A, 2
+             0x8c07     // DVI A, 2
     ]);
     cpu.process(); 
     assert_eq!(cpu.registers[0], 2);
@@ -295,6 +318,54 @@ fn test_mod() {
     ]);
     cpu.process(); 
     assert_eq!(cpu.registers[0], 1);
+    assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_mdi() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x9801,    // SET A, 5
+             0x8c09     // MDI A, 2
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 1);
+    assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_and() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0xa001,    // SET A, 7
+             0x980a     // AND A, 5
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 5);
+    assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_bor() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x9001,    // SET A, 3
+             0x980b     // BOR A, 5
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 7);
+    assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_xor() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x9001,    // SET A, 3
+             0x980c     // XOR A, 5
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 6);
     assert_eq!(cpu.pc, 2);
 }
 
