@@ -15,6 +15,12 @@ pub enum Opcode {
     SET,
     ADD,
     SUB,
+    MUL,
+    MLI,
+    DIV,
+    DVI,
+    MOD,
+
 
     JSR,
 
@@ -26,6 +32,11 @@ fn to_opcode(special: bool, bits: u8) -> Opcode {
         (false, 0x1) => Opcode::SET,
         (false, 0x2) => Opcode::ADD,
         (false, 0x3) => Opcode::SUB,
+        (false, 0x4) => Opcode::MUL,
+        (false, 0x5) => Opcode::MLI,
+        (false, 0x6) => Opcode::DIV,
+        (false, 0x7) => Opcode::DVI,
+        (false, 0x8) => Opcode::MOD,
         (true,  0x1) => Opcode::JSR,
         _ => Opcode::NULL
     }
@@ -52,16 +63,18 @@ impl Instruction {
     }
 
     pub fn b(&self) -> u8 {
-        get_bits_in_range(self.0, 5, 5) as u8
+        match self.is_special() {
+            false => get_bits_in_range(self.0, 5, 5) as u8,
+            true => 0 // returning 0 is safer than returning some random opcode
+        }
     }
 }
 
 impl Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.is_special() {
-            write!(f, "special, op: {:?}, a: 0x{:x}", self.opcode(), self.a())
-        } else {
-            write!(f, "normal, op: {:?}, a: 0x{:x}, b: 0x{:x}", self.opcode(), self.a(), self.b())
+        match self.is_special() {
+            true => write!(f, "special, op: {:?}, a: 0x{:x}", self.opcode(), self.a()),
+            false => write!(f, "normal, op: {:?}, a: 0x{:x}, b: 0x{:x}", self.opcode(), self.a(), self.b())
         }
     }
 }

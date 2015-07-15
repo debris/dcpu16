@@ -67,28 +67,59 @@ impl Dcpu {
         while self.memory.is_readable(self.pc as usize) {
             let word = self.read_word();
             let i = Instruction(word);
+            let a = i.a();
+            let b = i.b();
+
             match i.opcode() {
                 Opcode::SET => {
-                    let a = self.get_value(i.a());
-                    self.set_value(i.b(), a);
+                    let va = self.get_value(a);
+                    self.set_value(b, va);
                 },
-                Opcode::ADD => {
-                    let a = self.get_value(i.a());
-                    let b = self.get_value(i.b());
-                    self.set_value(i.b(), b + a);
+                Opcode::ADD => {                // TODO: EX 
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    self.set_value(b, vb.wrapping_add(va));
                 },
-                Opcode::SUB => {
-                    let a = self.get_value(i.a()); 
-                    let b = self.get_value(i.b());
-                    self.set_value(i.b(), b - a);
+                Opcode::SUB => {                // TODO: EX 
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    self.set_value(b, vb.wrapping_sub(va))
+                },
+                Opcode::MUL => {                // TODO: EX 
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    self.set_value(b, vb.wrapping_mul(va))
+                },
+                Opcode::MLI => {                // TODO: EX, handle signed 
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    self.set_value(b, vb.wrapping_mul(va))
+                }, 
+                Opcode::DIV => {                // TODO: EX
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    self.set_value(b, vb / va)
+                },
+                Opcode::DVI => {                // TODO: EX, handle signed
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    self.set_value(b, vb / va);
+                },
+                Opcode::MOD => {
+                    let va = self.get_value(a);
+                    let vb = self.get_value(b);
+                    match va {
+                        0 => self.set_value(b, 0),
+                        _ => self.set_value(b, vb % va)
+                    };
                 },
                 Opcode::JSR => {
-                    let a = self.get_value(i.a());
+                    let va = self.get_value(a);
                     let address = self.pc + 1;
                     self.push(address);
-                    self.pc = a;
+                    self.pc = va;
                 },
-                _ => () 
+                _ => panic!()
             }
         }
     }
@@ -184,12 +215,12 @@ fn test_registers() {
     ]);
     cpu.process(); 
 
+    assert_eq!(cpu.memory.get(0xffff), 10);
     assert_eq!(cpu.registers[0], 0xffff);
     assert_eq!(cpu.registers[1], 10);
     assert_eq!(cpu.sp, 0xffff);
     assert_eq!(cpu.pc, 3);
 }
-
 
 #[test]
 fn test_jsr() {
@@ -205,5 +236,65 @@ fn test_jsr() {
     assert_eq!(cpu.registers[1], 4);
     assert_eq!(cpu.sp, 0xfffe);
     assert_eq!(cpu.pc, 4);
+}
+
+#[test]
+fn test_mul() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0xc001,    // SET A, 15
+             0x8c04     // MUL A, 2
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 30);
+    assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_mli() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0xc001,    // SET A, 15
+             0x8c05     // MLI A, 2
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 30);
+    assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_div() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x9801,    // SET A, 5
+             0x8c06     // DIV A, 2
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 2);
+    assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_dvi() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x9801,    // SET A, 5
+             0x8c07     // DIV A, 2
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 2);
+    assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_mod() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x9801,    // SET A, 5
+             0x8c08     // MOD A, 2
+    ]);
+    cpu.process(); 
+    assert_eq!(cpu.registers[0], 1);
+    assert_eq!(cpu.pc, 2);
 }
 
