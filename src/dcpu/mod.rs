@@ -107,7 +107,7 @@ impl Dcpu {
                     let vb = self.get_value(b) as i16 as i32;
                     let res = vb * va;
                     self.set_value(b, res as u16);
-                    self.ex = ((res >> 16) & 0xffff) as u16;    // TODO: this one needs checking
+                    self.ex = ((res >> 16) & 0xffff) as u16;
                 }, 
                 Opcode::DIV => {
                     let va = self.get_value(a) as u32;
@@ -124,7 +124,7 @@ impl Dcpu {
                         }
                     };
                 },
-                Opcode::DVI => {                // TODO: EX, handle signed
+                Opcode::DVI => {
                     let va = self.get_value(a) as i16 as i32;
                     match va {
                         0 => {
@@ -149,11 +149,11 @@ impl Dcpu {
                     };
                 },
                 Opcode::MDI => {
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
+                    let va = self.get_value(a) as i16;
+                    let vb = self.get_value(b) as i16;
                     match va {
                         0 => self.set_value(b, 0),
-                        _ => self.set_value(b, vb % va)
+                        _ => self.set_value(b, (vb % va) as u16)
                     };
                 },
                 Opcode::AND => {
@@ -171,10 +171,12 @@ impl Dcpu {
                     let vb = self.get_value(b);
                     self.set_value(b, vb ^ va); 
                 },
-                Opcode::SHR => {                // TODO: EX, unsigned
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    self.set_value(b, vb >> va); 
+                Opcode::SHR => {
+                    let va = self.get_value(a) as u32;
+                    let vb = self.get_value(b) as u32;
+                    let res = vb >> va;
+                    self.set_value(b, res as u16); 
+                    self.ex = (((vb << 16) >> va) & 0xffff) as u16;
                 },
                 Opcode::ASR => {                // TODO: EX, signed
                     let va = self.get_value(a);
@@ -479,7 +481,7 @@ fn test_mli_overflow() {
     cpu.run(); 
     assert_eq!(cpu.registers[0], 0xfffc);
     assert_eq!(cpu.pc, 2);
-    assert_eq!(cpu.ex, 0xffff); // TODO: mli overflow needs checking
+    assert_eq!(cpu.ex, 0xffff); 
 }
 
 #[test]
@@ -545,6 +547,18 @@ fn test_mdi() {
 }
 
 #[test]
+fn test_mdi_signed() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x7c01, 0xfff9,    // SET A, -7
+             0xc409             // MDI A, 16
+    ]);
+    cpu.run(); 
+    assert_eq!(cpu.registers[0], 0xfff9);
+    assert_eq!(cpu.pc, 3);
+}
+
+#[test]
 fn test_and() {
     let mut cpu: Dcpu = Default::default();
     cpu.load(&[
@@ -590,6 +604,7 @@ fn test_shr() {
     cpu.run(); 
     assert_eq!(cpu.registers[0], 3);
     assert_eq!(cpu.pc, 2);
+    assert_eq!(cpu.ex, 0x8000);
 }
 
 #[test]
