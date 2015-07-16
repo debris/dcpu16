@@ -63,7 +63,7 @@ impl Dcpu {
         res
     }
 
-    fn process(&mut self) {
+    fn run(&mut self) {
         while self.memory.is_readable(self.pc as usize) {
             let word = self.read_word();
             let i = Instruction(word);
@@ -75,35 +75,70 @@ impl Dcpu {
                     let va = self.get_value(a);
                     self.set_value(b, va);
                 },
-                Opcode::ADD => {                // TODO: EX 
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    self.set_value(b, vb.wrapping_add(va));
+                Opcode::ADD => {
+                    let va = self.get_value(a) as u32;
+                    let vb = self.get_value(b) as u32;
+                    let res = vb + va;
+                    self.set_value(b, res as u16);
+                    self.ex = match res > 0xffff {
+                        true => 0x1,
+                        false => 0x0
+                    };
                 },
-                Opcode::SUB => {                // TODO: EX 
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    self.set_value(b, vb.wrapping_sub(va))
+                Opcode::SUB => {
+                    let va = self.get_value(a) as i16 as i32;
+                    let vb = self.get_value(b) as i16 as i32;
+                    let res = vb - va;
+                    self.set_value(b, res as u16);
+                    self.ex = match res < 0 {
+                        true => 0xffff,
+                        false => 0x0
+                    };
                 },
-                Opcode::MUL => {                // TODO: EX 
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    self.set_value(b, vb.wrapping_mul(va))
+                Opcode::MUL => {
+                    let va = self.get_value(a) as u32;
+                    let vb = self.get_value(b) as u32;
+                    let res = vb * va;
+                    self.set_value(b, res as u16);
+                    self.ex = ((res >> 16) & 0xffff) as u16;
                 },
-                Opcode::MLI => {                // TODO: EX, handle signed 
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    self.set_value(b, vb.wrapping_mul(va))
+                Opcode::MLI => {
+                    let va = self.get_value(a) as i16 as i32;
+                    let vb = self.get_value(b) as i16 as i32;
+                    let res = vb * va;
+                    self.set_value(b, res as u16);
+                    self.ex = ((res >> 16) & 0xffff) as u16;    // TODO: this one needs checking
                 }, 
-                Opcode::DIV => {                // TODO: EX
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    self.set_value(b, vb / va)
+                Opcode::DIV => {
+                    let va = self.get_value(a) as u32;
+                    match va {
+                        0 => {
+                            self.set_value(b, 0);
+                            self.ex = 0;
+                        },
+                        _ => {
+                            let vb = self.get_value(b) as u32;
+                            let res = vb / va;
+                            self.set_value(b, res as u16);
+                            self.ex = (((vb << 16) / va) & 0xffff) as u16;
+                        }
+                    };
                 },
                 Opcode::DVI => {                // TODO: EX, handle signed
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    self.set_value(b, vb / va);
+                    let va = self.get_value(a) as i16 as i32;
+                    match va {
+                        0 => {
+                            self.set_value(b, 0);
+                            self.ex = 0;
+                        },
+                        _ => {
+                            let vb = self.get_value(b) as i16 as i32;
+                            let res = vb / va;
+                            println!("a: {}, b: {}, res: {}", va, vb, res);
+                            self.set_value(b, res as u16);
+                            self.ex = (((vb << 16) / va) & 0xffff) as u16;
+                        }
+                    };
                 },
                 Opcode::MOD => {
                     let va = self.get_value(a);
@@ -287,7 +322,7 @@ fn test_set() {
              0xfc01,        // SET A, 30
              0x7c21, 0x001f // SET B, 31
     ]);
-    cpu.process();
+    cpu.run();
     assert_eq!(cpu.registers[0], 30);
     assert_eq!(cpu.registers[1], 31);
     assert_eq!(cpu.pc, 3);
@@ -301,10 +336,24 @@ fn test_add() {
              0x8821,    // SET B, 1
              0x0022     // ADD B, A
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 30);
     assert_eq!(cpu.registers[1], 31);
     assert_eq!(cpu.pc, 3);
+    assert_eq!(cpu.ex, 0);
+}
+
+#[test]
+fn test_add_overflow() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x8001,    // SET A, 0xffff
+             0x8c02     // ADD A, 2
+    ]);
+    cpu.run(); 
+    assert_eq!(cpu.registers[0], 1);
+    assert_eq!(cpu.pc, 2);
+    assert_eq!(cpu.ex, 1);
 }
 
 #[test]
@@ -314,9 +363,22 @@ fn test_sub() {
              0x7c01, 0x0022,    // SET A, 34
              0x7c03, 0x001f     // SUB A, 31
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 3);
     assert_eq!(cpu.pc, 4);
+}
+
+#[test]
+fn test_sub_underflow() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x8c01,    // SET A, 2
+             0x9403     // SUB A, 4
+    ]);
+    cpu.run(); 
+    assert_eq!(cpu.registers[0], 0xfffe);
+    assert_eq!(cpu.pc, 2);
+    assert_eq!(cpu.ex, 0xffff);
 }
 
 #[test]
@@ -330,7 +392,7 @@ fn test_push_pop_peek() {
              0x6002,            // ADD A, POP
              0x6421             // SET B, PEEK
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 36);
     assert_eq!(cpu.registers[1], 2);
     assert_eq!(cpu.pc, 7);
@@ -345,7 +407,7 @@ fn test_registers() {
              0x8001,    // SET A, 0xffff
              0x2021     // SET B, [A]
     ]);
-    cpu.process(); 
+    cpu.run(); 
 
     assert_eq!(cpu.memory.get(0xffff), 10);
     assert_eq!(cpu.registers[0], 0xffff);
@@ -363,7 +425,7 @@ fn test_jsr() {
              0x0422,    // ADD B, B
              0x0420     // JSR B
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 1);
     assert_eq!(cpu.registers[1], 4);
     assert_eq!(cpu.sp, 0xfffe);
@@ -377,9 +439,22 @@ fn test_mul() {
              0xc001,    // SET A, 15
              0x8c04     // MUL A, 2
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 30);
     assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_mul_overflow() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x9401,    // SET A, 4
+             0x8004     // MUL A, 0xffff
+    ]);
+    cpu.run(); 
+    assert_eq!(cpu.registers[0], 0xfffc);
+    assert_eq!(cpu.pc, 2);
+    assert_eq!(cpu.ex, 3);
 }
 
 #[test]
@@ -389,9 +464,22 @@ fn test_mli() {
              0xc001,    // SET A, 15
              0x8c05     // MLI A, 2
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 30);
     assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_mli_overflow() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x9401,    // SET A, 4
+             0x8005     // MLI A, 0xffff
+    ]);
+    cpu.run(); 
+    assert_eq!(cpu.registers[0], 0xfffc);
+    assert_eq!(cpu.pc, 2);
+    assert_eq!(cpu.ex, 0xffff); // TODO: mli overflow needs checking
 }
 
 #[test]
@@ -401,9 +489,10 @@ fn test_div() {
              0x9801,    // SET A, 5
              0x8c06     // DIV A, 2
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 2);
     assert_eq!(cpu.pc, 2);
+    assert_eq!(cpu.ex, 0x8000);
 }
 
 #[test]
@@ -413,9 +502,22 @@ fn test_dvi() {
              0x9801,    // SET A, 5
              0x8c07     // DVI A, 2
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 2);
     assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_dvi_signed() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x9801,            // SET A, 5
+             0x7c07, 0xfffe     // DVI A, -2
+    ]);
+    cpu.run(); 
+    assert_eq!(cpu.registers[0], 0xfffe);
+    assert_eq!(cpu.pc, 3);
+    assert_eq!(cpu.ex, 0x8000);
 }
 
 #[test]
@@ -425,7 +527,7 @@ fn test_mod() {
              0x9801,    // SET A, 5
              0x8c08     // MOD A, 2
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 1);
     assert_eq!(cpu.pc, 2);
 }
@@ -437,7 +539,7 @@ fn test_mdi() {
              0x9801,    // SET A, 5
              0x8c09     // MDI A, 2
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 1);
     assert_eq!(cpu.pc, 2);
 }
@@ -449,7 +551,7 @@ fn test_and() {
              0xa001,    // SET A, 7
              0x980a     // AND A, 5
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 5);
     assert_eq!(cpu.pc, 2);
 }
@@ -461,7 +563,7 @@ fn test_bor() {
              0x9001,    // SET A, 3
              0x980b     // BOR A, 5
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 7);
     assert_eq!(cpu.pc, 2);
 }
@@ -473,7 +575,7 @@ fn test_xor() {
              0x9001,    // SET A, 3
              0x980c     // XOR A, 5
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 6);
     assert_eq!(cpu.pc, 2);
 }
@@ -485,7 +587,7 @@ fn test_shr() {
              0xa001,    // SET A, 7
              0x880d     // SHR A, 1
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 3);
     assert_eq!(cpu.pc, 2);
 }
@@ -497,7 +599,7 @@ fn test_asr() {
              0xa001,    // SET A, 7
              0x880e     // ASR A, 1
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 3);
     assert_eq!(cpu.pc, 2);
 }
@@ -509,7 +611,7 @@ fn test_shl() {
              0xa001,    // SET A, 7
              0x880f     // SHL A, 1
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 14);
     assert_eq!(cpu.pc, 2);
 }
@@ -524,7 +626,7 @@ fn test_ifb() {
              0x8810,    // IFB A, 1
              0x8821     // SET B, 1
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 2);
     assert_eq!(cpu.registers[1], 0);
     assert_eq!(cpu.pc, 5);
@@ -540,7 +642,7 @@ fn test_ifc() {
              0x8c11,    // IFC A, 2
              0x8821     // SET B, 1
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 1);
     assert_eq!(cpu.registers[1], 1);
     assert_eq!(cpu.pc, 5);
@@ -556,7 +658,7 @@ fn test_ife() {
              0x8812,    // IFE A, 1
              0x8821     // SET B, 1
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 1);
     assert_eq!(cpu.registers[1], 1);
     assert_eq!(cpu.pc, 5);
@@ -572,7 +674,7 @@ fn test_ifn() {
              0x8c13,    // IFN A, 2
              0x8821     // SET B, 1
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 2);
     assert_eq!(cpu.registers[1], 0);
     assert_eq!(cpu.pc, 5);
@@ -588,7 +690,7 @@ fn test_ifg() {
              0x8814,    // IFG A, 1
              0x8821     // SET B, 1
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 1);
     assert_eq!(cpu.registers[1], 0);
     assert_eq!(cpu.pc, 5);
@@ -604,7 +706,7 @@ fn test_ifa() {
              0x8815,    // IFA A, 1
              0x8821     // SET B, 1
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 1);
     assert_eq!(cpu.registers[1], 0);
     assert_eq!(cpu.pc, 5);
@@ -620,7 +722,7 @@ fn test_ifl() {
              0x8c16,    // IFL A, 2
              0x8821     // SET B, 1
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 2);
     assert_eq!(cpu.registers[1], 0);
     assert_eq!(cpu.pc, 5);
@@ -636,7 +738,7 @@ fn test_ifu() {
              0x8c17,    // IFU A, 2
              0x8821     // SET B, 1
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 2);
     assert_eq!(cpu.registers[1], 0);
     assert_eq!(cpu.pc, 5);
@@ -648,7 +750,7 @@ fn test_sti() {
     cpu.load(&[
              0xc01e     // STI A, 15
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 15);
     assert_eq!(cpu.registers[6], 1);
     assert_eq!(cpu.registers[7], 1);
@@ -661,7 +763,7 @@ fn test_std() {
     cpu.load(&[
              0xc01f     // STD A, 15
     ]);
-    cpu.process(); 
+    cpu.run(); 
     assert_eq!(cpu.registers[0], 15);
     assert_eq!(cpu.registers[6], 0xffff);
     assert_eq!(cpu.registers[7], 0xffff);
