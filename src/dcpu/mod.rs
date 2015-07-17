@@ -86,8 +86,8 @@ impl Dcpu {
                     };
                 },
                 Opcode::SUB => {
-                    let va = self.get_value(a) as i16 as i32;
-                    let vb = self.get_value(b) as i16 as i32;
+                    let va = self.get_value(a) as i32;
+                    let vb = self.get_value(b) as i32;
                     let res = vb - va;
                     self.set_value(b, res as u16);
                     self.ex = match res < 0 {
@@ -178,15 +178,19 @@ impl Dcpu {
                     self.set_value(b, res as u16); 
                     self.ex = (((vb << 16) >> va) & 0xffff) as u16;
                 },
-                Opcode::ASR => {                // TODO: EX, signed
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    self.set_value(b, vb >> va); 
+                Opcode::ASR => {
+                    let va = self.get_value(a) as i16 as i32;
+                    let vb = self.get_value(b) as i16 as i32;
+                    let res = vb >> va;
+                    self.set_value(b, res as u16); 
+                    self.ex = (((vb << 16) >> va) & 0xffff) as u16;
                 },
                 Opcode::SHL => {
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    self.set_value(b, vb << va); 
+                    let va = self.get_value(a) as u32;
+                    let vb = self.get_value(b) as u32;
+                    let res = vb << va;
+                    self.set_value(b, res as u16); 
+                    self.ex = (((vb << va) >> 16) & 0xffff) as u16;
                 },
                 Opcode::IFB => {
                     let va = self.get_value(a);
@@ -223,9 +227,9 @@ impl Dcpu {
                         self.pc = self.pc + 1;
                     }
                 },
-                Opcode::IFA => {                // TODO: signed
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
+                Opcode::IFA => {
+                    let va = self.get_value(a) as i16;
+                    let vb = self.get_value(b) as i16;
                     if !(vb > va) {
                         self.pc = self.pc + 1;
                     }
@@ -237,24 +241,34 @@ impl Dcpu {
                         self.pc = self.pc + 1;
                     }
                 },
-                Opcode::IFU => {                // TODO: signed
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
+                Opcode::IFU => {
+                    let va = self.get_value(a) as i16;
+                    let vb = self.get_value(b) as i16;
                     if !(vb < va) {
                         self.pc = self.pc + 1;
                     }
                 },
-                Opcode::ADX => {                // TODO: EX, test
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    let ex = self.ex;
-                    self.set_value(b, vb.wrapping_add(va).wrapping_add(ex));
+                Opcode::ADX => {
+                    let va = self.get_value(a) as u32;
+                    let vb = self.get_value(b) as u32;
+                    let ex = self.ex as u32;
+                    let res = vb + va + ex;
+                    self.set_value(b, res as u16);
+                    self.ex = match res > 0xffff {
+                        true => 0x1,
+                        false => 0x0
+                    };
                 },
-                Opcode::SBX => {                // TODO: EX, test
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    let ex = self.ex;
-                    self.set_value(b, vb.wrapping_sub(va).wrapping_add(ex));
+                Opcode::SBX => {
+                    let va = self.get_value(a) as i32;
+                    let vb = self.get_value(b) as i32;
+                    let ex = self.ex as i32;
+                    let res = vb - va + ex;
+                    self.set_value(b, res as u16);
+                    self.ex = match res < 0 {
+                        true => 0xffff,
+                        false => 0x0
+                    };
                 },
                 Opcode::STI => {
                     let va = self.get_value(a);
@@ -617,6 +631,7 @@ fn test_asr() {
     cpu.run(); 
     assert_eq!(cpu.registers[0], 3);
     assert_eq!(cpu.pc, 2);
+    assert_eq!(cpu.ex, 0x8000);
 }
 
 #[test]
@@ -629,6 +644,19 @@ fn test_shl() {
     cpu.run(); 
     assert_eq!(cpu.registers[0], 14);
     assert_eq!(cpu.pc, 2);
+}
+
+#[test]
+fn test_shl_ex() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0xa001,    // SET A, 7
+             0xe40f     // SHL A, 24
+    ]);
+    cpu.run(); 
+    assert_eq!(cpu.registers[0], 0);
+    assert_eq!(cpu.pc, 2);
+    assert_eq!(cpu.ex, 0x0700);
 }
 
 #[test]
