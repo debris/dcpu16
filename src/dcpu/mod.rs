@@ -59,7 +59,7 @@ impl Dcpu {
 
     fn pop(&mut self) -> u16 {
         let res = self.memory.get(self.sp as usize); 
-        self.sp += 1;
+        self.sp = self.sp.wrapping_add(1);
         res
     }
 
@@ -293,6 +293,31 @@ impl Dcpu {
                 self.push(address);
                 self.pc = va;
             },
+            Opcode::INT => {
+                if (self.ia != 0) {
+                    let va = self.get_value(a);
+                    let pc = self.pc;
+                    self.push(pc);
+                    let reg_a = self.registers[0];
+                    self.push(reg_a);
+                    self.pc = self.ia;
+                    self.registers[0] = va;
+                }
+            },
+            Opcode::IAG => {
+                let ia = self.ia;
+                self.set_value(a, ia);
+            },
+            Opcode::IAS => {
+                let va = self.get_value(a);
+                self.ia = va;
+            },
+            Opcode::RFI => {
+                let va = self.get_value(a);
+                self.registers[0] = self.pop();
+                self.pc = self.pop();
+
+            },
             _ => panic!()
         }
     }
@@ -322,7 +347,7 @@ impl Dcpu {
             },
             0x1f => self.read_word() as Value,
             n @ 0x20 ... 0x3f => ((n as Value).wrapping_sub(0x21)),
-            _ => 0
+            _ => panic!()
         }
     }
 
@@ -330,7 +355,7 @@ impl Dcpu {
         match addr {
             n @ 0x0 ... 0x7 => self.registers[n as usize] = value,
             0x18 => self.push(value),
-            _ => ()
+            _ => panic!()
         }
     }
 }
@@ -815,5 +840,44 @@ fn test_std() {
     assert_eq!(cpu.registers[6], 0xffff);
     assert_eq!(cpu.registers[7], 0xffff);
     assert_eq!(cpu.pc, 1);
+}
+
+#[test]
+fn test_int() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x9401,            // SET A, 4
+             0x7d40, 0x0006,    // IAS 6
+             0x7d00, 0x0008,    // INT 8
+             0x9021,            // SET B, 3
+             0xa041             // SET C, 7
+    ]);
+    cpu.run(); 
+    assert_eq!(cpu.registers[0], 8);
+    assert_eq!(cpu.registers[1], 0);
+    assert_eq!(cpu.registers[2], 7);
+    assert_eq!(cpu.pc, 7);
+    assert_eq!(cpu.sp, 0xfffe);
+    assert_eq!(cpu.ia, 6);
+}
+
+#[test]
+fn test_rfi() {
+    let mut cpu: Dcpu = Default::default();
+    cpu.load(&[
+             0x9401,            // SET A, 4
+             0x7d40, 0x0006,    // IAS 6
+             0x7d00, 0x0008,    // INT 8
+             0x9021,            // SET B, 3
+             0xa042,            // ADD C, 7
+             0x7d60, 0x0001     // RFI 1
+    ]);
+    cpu.run(); 
+    assert_eq!(cpu.registers[0], 0x9401);
+    assert_eq!(cpu.registers[1], 3);
+    assert_eq!(cpu.registers[2], 14);
+    assert_eq!(cpu.pc, 0x7d40);
+    assert_eq!(cpu.sp, 2);
+    assert_eq!(cpu.ia, 6);
 }
 

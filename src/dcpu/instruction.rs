@@ -41,6 +41,10 @@ pub enum Opcode {
     STD,
 
     JSR,
+    INT,
+    IAG,
+    IAS,
+    RFI,
 
     NULL
 }
@@ -75,6 +79,10 @@ fn to_opcode(special: bool, bits: u8) -> Opcode {
         (false, 0x1e) => Opcode::STI,
         (false, 0x1f) => Opcode::STD,
         (true,  0x1) => Opcode::JSR,
+        (true, 0x8) => Opcode::INT,
+        (true, 0x9) => Opcode::IAG,
+        (true, 0xa) => Opcode::IAS,
+        (true, 0xb) => Opcode::RFI,
         _ => Opcode::NULL
     }
 }
