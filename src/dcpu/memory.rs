@@ -29,7 +29,7 @@ impl Memory {
         self.memory[pos] = word;
     }
 
-    pub fn is_readable(&self, pos: usize) -> bool {
+    pub fn has_word_at(&self, pos: usize) -> bool {
         pos < self.loaded
     }
 }

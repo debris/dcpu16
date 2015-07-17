@@ -64,232 +64,236 @@ impl Dcpu {
     }
 
     fn run(&mut self) {
-        while self.memory.is_readable(self.pc as usize) {
-            let word = self.read_word();
-            let i = Instruction(word);
-            let a = i.a();
-            let b = i.b();
+        while self.memory.has_word_at(self.pc as usize) {
+            self.run_step();
+        }
+    }
 
-            match i.opcode() {
-                Opcode::SET => {
-                    let va = self.get_value(a);
-                    self.set_value(b, va);
-                },
-                Opcode::ADD => {
-                    let va = self.get_value(a) as u32;
-                    let vb = self.get_value(b) as u32;
-                    let res = vb + va;
-                    self.set_value(b, res as u16);
-                    self.ex = match res > 0xffff {
-                        true => 0x1,
-                        false => 0x0
-                    };
-                },
-                Opcode::SUB => {
-                    let va = self.get_value(a) as i32;
-                    let vb = self.get_value(b) as i32;
-                    let res = vb - va;
-                    self.set_value(b, res as u16);
-                    self.ex = match res < 0 {
-                        true => 0xffff,
-                        false => 0x0
-                    };
-                },
-                Opcode::MUL => {
-                    let va = self.get_value(a) as u32;
-                    let vb = self.get_value(b) as u32;
-                    let res = vb * va;
-                    self.set_value(b, res as u16);
-                    self.ex = ((res >> 16) & 0xffff) as u16;
-                },
-                Opcode::MLI => {
-                    let va = self.get_value(a) as i16 as i32;
-                    let vb = self.get_value(b) as i16 as i32;
-                    let res = vb * va;
-                    self.set_value(b, res as u16);
-                    self.ex = ((res >> 16) & 0xffff) as u16;
-                }, 
-                Opcode::DIV => {
-                    let va = self.get_value(a) as u32;
-                    match va {
-                        0 => {
-                            self.set_value(b, 0);
-                            self.ex = 0;
-                        },
-                        _ => {
-                            let vb = self.get_value(b) as u32;
-                            let res = vb / va;
-                            self.set_value(b, res as u16);
-                            self.ex = (((vb << 16) / va) & 0xffff) as u16;
-                        }
-                    };
-                },
-                Opcode::DVI => {
-                    let va = self.get_value(a) as i16 as i32;
-                    match va {
-                        0 => {
-                            self.set_value(b, 0);
-                            self.ex = 0;
-                        },
-                        _ => {
-                            let vb = self.get_value(b) as i16 as i32;
-                            let res = vb / va;
-                            println!("a: {}, b: {}, res: {}", va, vb, res);
-                            self.set_value(b, res as u16);
-                            self.ex = (((vb << 16) / va) & 0xffff) as u16;
-                        }
-                    };
-                },
-                Opcode::MOD => {
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    match va {
-                        0 => self.set_value(b, 0),
-                        _ => self.set_value(b, vb % va)
-                    };
-                },
-                Opcode::MDI => {
-                    let va = self.get_value(a) as i16;
-                    let vb = self.get_value(b) as i16;
-                    match va {
-                        0 => self.set_value(b, 0),
-                        _ => self.set_value(b, (vb % va) as u16)
-                    };
-                },
-                Opcode::AND => {
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    self.set_value(b, vb & va); 
-                },
-                Opcode::BOR => {
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    self.set_value(b, vb | va); 
-                },
-                Opcode::XOR => {
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    self.set_value(b, vb ^ va); 
-                },
-                Opcode::SHR => {
-                    let va = self.get_value(a) as u32;
-                    let vb = self.get_value(b) as u32;
-                    let res = vb >> va;
-                    self.set_value(b, res as u16); 
-                    self.ex = (((vb << 16) >> va) & 0xffff) as u16;
-                },
-                Opcode::ASR => {
-                    let va = self.get_value(a) as i16 as i32;
-                    let vb = self.get_value(b) as i16 as i32;
-                    let res = vb >> va;
-                    self.set_value(b, res as u16); 
-                    self.ex = (((vb << 16) >> va) & 0xffff) as u16;
-                },
-                Opcode::SHL => {
-                    let va = self.get_value(a) as u32;
-                    let vb = self.get_value(b) as u32;
-                    let res = vb << va;
-                    self.set_value(b, res as u16); 
-                    self.ex = (((vb << va) >> 16) & 0xffff) as u16;
-                },
-                Opcode::IFB => {
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    if (vb & va) == 0 {
-                        self.pc = self.pc + 1;
+    fn run_step(&mut self) {
+        let word = self.read_word();
+        let i = Instruction(word);
+        let a = i.a();
+        let b = i.b();
+
+        match i.opcode() {
+            Opcode::SET => {
+                let va = self.get_value(a);
+                self.set_value(b, va);
+            },
+            Opcode::ADD => {
+                let va = self.get_value(a) as u32;
+                let vb = self.get_value(b) as u32;
+                let res = vb + va;
+                self.set_value(b, res as u16);
+                self.ex = match res > 0xffff {
+                    true => 0x1,
+                    false => 0x0
+                };
+            },
+            Opcode::SUB => {
+                let va = self.get_value(a) as i32;
+                let vb = self.get_value(b) as i32;
+                let res = vb - va;
+                self.set_value(b, res as u16);
+                self.ex = match res < 0 {
+                    true => 0xffff,
+                    false => 0x0
+                };
+            },
+            Opcode::MUL => {
+                let va = self.get_value(a) as u32;
+                let vb = self.get_value(b) as u32;
+                let res = vb * va;
+                self.set_value(b, res as u16);
+                self.ex = ((res >> 16) & 0xffff) as u16;
+            },
+            Opcode::MLI => {
+                let va = self.get_value(a) as i16 as i32;
+                let vb = self.get_value(b) as i16 as i32;
+                let res = vb * va;
+                self.set_value(b, res as u16);
+                self.ex = ((res >> 16) & 0xffff) as u16;
+            }, 
+            Opcode::DIV => {
+                let va = self.get_value(a) as u32;
+                match va {
+                    0 => {
+                        self.set_value(b, 0);
+                        self.ex = 0;
+                    },
+                    _ => {
+                        let vb = self.get_value(b) as u32;
+                        let res = vb / va;
+                        self.set_value(b, res as u16);
+                        self.ex = (((vb << 16) / va) & 0xffff) as u16;
                     }
-                },
-                Opcode::IFC => {
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    if (vb & va) != 0 {
-                        self.pc = self.pc + 1;
+                };
+            },
+            Opcode::DVI => {
+                let va = self.get_value(a) as i16 as i32;
+                match va {
+                    0 => {
+                        self.set_value(b, 0);
+                        self.ex = 0;
+                    },
+                    _ => {
+                        let vb = self.get_value(b) as i16 as i32;
+                        let res = vb / va;
+                        println!("a: {}, b: {}, res: {}", va, vb, res);
+                        self.set_value(b, res as u16);
+                        self.ex = (((vb << 16) / va) & 0xffff) as u16;
                     }
-                },
-                Opcode::IFE => {
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    if vb != va {
-                        self.pc = self.pc + 1;
-                    }
-                },
-                Opcode::IFN => {
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    if vb == va {
-                        self.pc = self.pc + 1;
-                    }
-                },
-                Opcode::IFG => {
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    if !(vb > va) {
-                        self.pc = self.pc + 1;
-                    }
-                },
-                Opcode::IFA => {
-                    let va = self.get_value(a) as i16;
-                    let vb = self.get_value(b) as i16;
-                    if !(vb > va) {
-                        self.pc = self.pc + 1;
-                    }
-                },
-                Opcode::IFL => {
-                    let va = self.get_value(a);
-                    let vb = self.get_value(b);
-                    if !(vb < va) {
-                        self.pc = self.pc + 1;
-                    }
-                },
-                Opcode::IFU => {
-                    let va = self.get_value(a) as i16;
-                    let vb = self.get_value(b) as i16;
-                    if !(vb < va) {
-                        self.pc = self.pc + 1;
-                    }
-                },
-                Opcode::ADX => {
-                    let va = self.get_value(a) as u32;
-                    let vb = self.get_value(b) as u32;
-                    let ex = self.ex as u32;
-                    let res = vb + va + ex;
-                    self.set_value(b, res as u16);
-                    self.ex = match res > 0xffff {
-                        true => 0x1,
-                        false => 0x0
-                    };
-                },
-                Opcode::SBX => {
-                    let va = self.get_value(a) as i32;
-                    let vb = self.get_value(b) as i32;
-                    let ex = self.ex as i32;
-                    let res = vb - va + ex;
-                    self.set_value(b, res as u16);
-                    self.ex = match res < 0 {
-                        true => 0xffff,
-                        false => 0x0
-                    };
-                },
-                Opcode::STI => {
-                    let va = self.get_value(a);
-                    self.set_value(b, va);
-                    self.registers[6] = self.registers[6].wrapping_add(1);
-                    self.registers[7] = self.registers[7].wrapping_add(1);
-                },
-                Opcode::STD => {
-                    let va = self.get_value(a);
-                    self.set_value(b, va);
-                    self.registers[6] = self.registers[6].wrapping_sub(1);
-                    self.registers[7] = self.registers[7].wrapping_sub(1);
-                },
-                Opcode::JSR => {
-                    let va = self.get_value(a);
-                    let address = self.pc + 1;
-                    self.push(address);
-                    self.pc = va;
-                },
-                _ => panic!()
-            }
+                };
+            },
+            Opcode::MOD => {
+                let va = self.get_value(a);
+                let vb = self.get_value(b);
+                match va {
+                    0 => self.set_value(b, 0),
+                    _ => self.set_value(b, vb % va)
+                };
+            },
+            Opcode::MDI => {
+                let va = self.get_value(a) as i16;
+                let vb = self.get_value(b) as i16;
+                match va {
+                    0 => self.set_value(b, 0),
+                    _ => self.set_value(b, (vb % va) as u16)
+                };
+            },
+            Opcode::AND => {
+                let va = self.get_value(a);
+                let vb = self.get_value(b);
+                self.set_value(b, vb & va); 
+            },
+            Opcode::BOR => {
+                let va = self.get_value(a);
+                let vb = self.get_value(b);
+                self.set_value(b, vb | va); 
+            },
+            Opcode::XOR => {
+                let va = self.get_value(a);
+                let vb = self.get_value(b);
+                self.set_value(b, vb ^ va); 
+            },
+            Opcode::SHR => {
+                let va = self.get_value(a) as u32;
+                let vb = self.get_value(b) as u32;
+                let res = vb >> va;
+                self.set_value(b, res as u16); 
+                self.ex = (((vb << 16) >> va) & 0xffff) as u16;
+            },
+            Opcode::ASR => {
+                let va = self.get_value(a) as i16 as i32;
+                let vb = self.get_value(b) as i16 as i32;
+                let res = vb >> va;
+                self.set_value(b, res as u16); 
+                self.ex = (((vb << 16) >> va) & 0xffff) as u16;
+            },
+            Opcode::SHL => {
+                let va = self.get_value(a) as u32;
+                let vb = self.get_value(b) as u32;
+                let res = vb << va;
+                self.set_value(b, res as u16); 
+                self.ex = (((vb << va) >> 16) & 0xffff) as u16;
+            },
+            Opcode::IFB => {
+                let va = self.get_value(a);
+                let vb = self.get_value(b);
+                if (vb & va) == 0 {
+                    self.pc = self.pc + 1;
+                }
+            },
+            Opcode::IFC => {
+                let va = self.get_value(a);
+                let vb = self.get_value(b);
+                if (vb & va) != 0 {
+                    self.pc = self.pc + 1;
+                }
+            },
+            Opcode::IFE => {
+                let va = self.get_value(a);
+                let vb = self.get_value(b);
+                if vb != va {
+                    self.pc = self.pc + 1;
+                }
+            },
+            Opcode::IFN => {
+                let va = self.get_value(a);
+                let vb = self.get_value(b);
+                if vb == va {
+                    self.pc = self.pc + 1;
+                }
+            },
+            Opcode::IFG => {
+                let va = self.get_value(a);
+                let vb = self.get_value(b);
+                if !(vb > va) {
+                    self.pc = self.pc + 1;
+                }
+            },
+            Opcode::IFA => {
+                let va = self.get_value(a) as i16;
+                let vb = self.get_value(b) as i16;
+                if !(vb > va) {
+                    self.pc = self.pc + 1;
+                }
+            },
+            Opcode::IFL => {
+                let va = self.get_value(a);
+                let vb = self.get_value(b);
+                if !(vb < va) {
+                    self.pc = self.pc + 1;
+                }
+            },
+            Opcode::IFU => {
+                let va = self.get_value(a) as i16;
+                let vb = self.get_value(b) as i16;
+                if !(vb < va) {
+                    self.pc = self.pc + 1;
+                }
+            },
+            Opcode::ADX => {
+                let va = self.get_value(a) as u32;
+                let vb = self.get_value(b) as u32;
+                let ex = self.ex as u32;
+                let res = vb + va + ex;
+                self.set_value(b, res as u16);
+                self.ex = match res > 0xffff {
+                    true => 0x1,
+                    false => 0x0
+                };
+            },
+            Opcode::SBX => {
+                let va = self.get_value(a) as i32;
+                let vb = self.get_value(b) as i32;
+                let ex = self.ex as i32;
+                let res = vb - va + ex;
+                self.set_value(b, res as u16);
+                self.ex = match res < 0 {
+                    true => 0xffff,
+                    false => 0x0
+                };
+            },
+            Opcode::STI => {
+                let va = self.get_value(a);
+                self.set_value(b, va);
+                self.registers[6] = self.registers[6].wrapping_add(1);
+                self.registers[7] = self.registers[7].wrapping_add(1);
+            },
+            Opcode::STD => {
+                let va = self.get_value(a);
+                self.set_value(b, va);
+                self.registers[6] = self.registers[6].wrapping_sub(1);
+                self.registers[7] = self.registers[7].wrapping_sub(1);
+            },
+            Opcode::JSR => {
+                let va = self.get_value(a);
+                let address = self.pc + 1;
+                self.push(address);
+                self.pc = va;
+            },
+            _ => panic!()
         }
     }
 
