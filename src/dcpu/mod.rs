@@ -2,8 +2,8 @@ mod memory;
 mod instruction;
 
 use self::memory::Memory as Memory;
+use self::instruction::InstructionFactory as InstructionFactory;
 use self::instruction::Instruction as Instruction;
-use self::instruction::Opcode as Opcode;
 
 pub struct Cpu {
     memory: Memory,
@@ -59,12 +59,12 @@ impl Cpu {
 
     pub fn run_step(&mut self) {
         let word = self.read_word();
-        match Instruction(word).opcode() {
-            Opcode::SET(a, b) => {
+        match InstructionFactory::new(&word) {
+            Instruction::SET(a, b) => {
                 let va = self.get_value(a);
                 self.set_value(b, va);
             },
-            Opcode::ADD(a, b) => {
+            Instruction::ADD(a, b) => {
                 let va = self.get_value(a) as u32;
                 let vb = self.get_value(b) as u32;
                 let res = vb + va;
@@ -74,7 +74,7 @@ impl Cpu {
                     false => 0x0
                 };
             },
-            Opcode::SUB(a, b) => {
+            Instruction::SUB(a, b) => {
                 let va = self.get_value(a) as i32;
                 let vb = self.get_value(b) as i32;
                 let res = vb - va;
@@ -84,21 +84,21 @@ impl Cpu {
                     false => 0x0
                 };
             },
-            Opcode::MUL(a, b) => {
+            Instruction::MUL(a, b) => {
                 let va = self.get_value(a) as u32;
                 let vb = self.get_value(b) as u32;
                 let res = vb * va;
                 self.set_value(b, res as u16);
                 self.ex = ((res >> 16) & 0xffff) as u16;
             },
-            Opcode::MLI(a, b) => {
+            Instruction::MLI(a, b) => {
                 let va = self.get_value(a) as i16 as i32;
                 let vb = self.get_value(b) as i16 as i32;
                 let res = vb * va;
                 self.set_value(b, res as u16);
                 self.ex = ((res >> 16) & 0xffff) as u16;
             }, 
-            Opcode::DIV(a, b) => {
+            Instruction::DIV(a, b) => {
                 let va = self.get_value(a) as u32;
                 match va {
                     0 => {
@@ -113,7 +113,7 @@ impl Cpu {
                     }
                 };
             },
-            Opcode::DVI(a, b) => {
+            Instruction::DVI(a, b) => {
                 let va = self.get_value(a) as i16 as i32;
                 match va {
                     0 => {
@@ -129,7 +129,7 @@ impl Cpu {
                     }
                 };
             },
-            Opcode::MOD(a, b) => {
+            Instruction::MOD(a, b) => {
                 let va = self.get_value(a);
                 let vb = self.get_value(b);
                 match va {
@@ -137,7 +137,7 @@ impl Cpu {
                     _ => self.set_value(b, vb % va)
                 };
             },
-            Opcode::MDI(a, b) => {
+            Instruction::MDI(a, b) => {
                 let va = self.get_value(a) as i16;
                 let vb = self.get_value(b) as i16;
                 match va {
@@ -145,99 +145,99 @@ impl Cpu {
                     _ => self.set_value(b, (vb % va) as u16)
                 };
             },
-            Opcode::AND(a, b) => {
+            Instruction::AND(a, b) => {
                 let va = self.get_value(a);
                 let vb = self.get_value(b);
                 self.set_value(b, vb & va); 
             },
-            Opcode::BOR(a, b) => {
+            Instruction::BOR(a, b) => {
                 let va = self.get_value(a);
                 let vb = self.get_value(b);
                 self.set_value(b, vb | va); 
             },
-            Opcode::XOR(a, b) => {
+            Instruction::XOR(a, b) => {
                 let va = self.get_value(a);
                 let vb = self.get_value(b);
                 self.set_value(b, vb ^ va); 
             },
-            Opcode::SHR(a, b) => {
+            Instruction::SHR(a, b) => {
                 let va = self.get_value(a) as u32;
                 let vb = self.get_value(b) as u32;
                 let res = vb >> va;
                 self.set_value(b, res as u16); 
                 self.ex = (((vb << 16) >> va) & 0xffff) as u16;
             },
-            Opcode::ASR(a, b) => {
+            Instruction::ASR(a, b) => {
                 let va = self.get_value(a) as i16 as i32;
                 let vb = self.get_value(b) as i16 as i32;
                 let res = vb >> va;
                 self.set_value(b, res as u16); 
                 self.ex = (((vb << 16) >> va) & 0xffff) as u16;
             },
-            Opcode::SHL(a, b) => {
+            Instruction::SHL(a, b) => {
                 let va = self.get_value(a) as u32;
                 let vb = self.get_value(b) as u32;
                 let res = vb << va;
                 self.set_value(b, res as u16); 
                 self.ex = (((vb << va) >> 16) & 0xffff) as u16;
             },
-            Opcode::IFB(a, b) => {
+            Instruction::IFB(a, b) => {
                 let va = self.get_value(a);
                 let vb = self.get_value(b);
                 if (vb & va) == 0 {
                     self.pc = self.pc + 1;
                 }
             },
-            Opcode::IFC(a, b) => {
+            Instruction::IFC(a, b) => {
                 let va = self.get_value(a);
                 let vb = self.get_value(b);
                 if (vb & va) != 0 {
                     self.pc = self.pc + 1;
                 }
             },
-            Opcode::IFE(a, b) => {
+            Instruction::IFE(a, b) => {
                 let va = self.get_value(a);
                 let vb = self.get_value(b);
                 if vb != va {
                     self.pc = self.pc + 1;
                 }
             },
-            Opcode::IFN(a, b) => {
+            Instruction::IFN(a, b) => {
                 let va = self.get_value(a);
                 let vb = self.get_value(b);
                 if vb == va {
                     self.pc = self.pc + 1;
                 }
             },
-            Opcode::IFG(a, b) => {
+            Instruction::IFG(a, b) => {
                 let va = self.get_value(a);
                 let vb = self.get_value(b);
                 if !(vb > va) {
                     self.pc = self.pc + 1;
                 }
             },
-            Opcode::IFA(a, b) => {
+            Instruction::IFA(a, b) => {
                 let va = self.get_value(a) as i16;
                 let vb = self.get_value(b) as i16;
                 if !(vb > va) {
                     self.pc = self.pc + 1;
                 }
             },
-            Opcode::IFL(a, b) => {
+            Instruction::IFL(a, b) => {
                 let va = self.get_value(a);
                 let vb = self.get_value(b);
                 if !(vb < va) {
                     self.pc = self.pc + 1;
                 }
             },
-            Opcode::IFU(a, b) => {
+            Instruction::IFU(a, b) => {
                 let va = self.get_value(a) as i16;
                 let vb = self.get_value(b) as i16;
                 if !(vb < va) {
                     self.pc = self.pc + 1;
                 }
             },
-            Opcode::ADX(a, b) => {
+            Instruction::ADX(a, b) => {
                 let va = self.get_value(a) as u32;
                 let vb = self.get_value(b) as u32;
                 let ex = self.ex as u32;
@@ -248,7 +248,7 @@ impl Cpu {
                     false => 0x0
                 };
             },
-            Opcode::SBX(a, b) => {
+            Instruction::SBX(a, b) => {
                 let va = self.get_value(a) as i32;
                 let vb = self.get_value(b) as i32;
                 let ex = self.ex as i32;
@@ -259,25 +259,25 @@ impl Cpu {
                     false => 0x0
                 };
             },
-            Opcode::STI(a, b) => {
+            Instruction::STI(a, b) => {
                 let va = self.get_value(a);
                 self.set_value(b, va);
                 self.registers[6] = self.registers[6].wrapping_add(1);
                 self.registers[7] = self.registers[7].wrapping_add(1);
             },
-            Opcode::STD(a, b) => {
+            Instruction::STD(a, b) => {
                 let va = self.get_value(a);
                 self.set_value(b, va);
                 self.registers[6] = self.registers[6].wrapping_sub(1);
                 self.registers[7] = self.registers[7].wrapping_sub(1);
             },
-            Opcode::JSR(a) => {
+            Instruction::JSR(a) => {
                 let va = self.get_value(a);
                 let address = self.pc + 1;
                 self.push(address);
                 self.pc = va;
             },
-            Opcode::INT(a) if self.ia != 0 => {
+            Instruction::INT(a) if self.ia != 0 => {
                 let va = self.get_value(a);
                 let pc = self.pc;
                 self.push(pc);
@@ -286,16 +286,16 @@ impl Cpu {
                 self.pc = self.ia;
                 self.registers[0] = va;
             },
-            Opcode::INT(_) => {},
-            Opcode::IAG(a) => {
+            Instruction::INT(_) => {},
+            Instruction::IAG(a) => {
                 let ia = self.ia;
                 self.set_value(a, ia);
             },
-            Opcode::IAS(a) => {
+            Instruction::IAS(a) => {
                 let va = self.get_value(a);
                 self.ia = va;
             },
-            Opcode::RFI(a) => {
+            Instruction::RFI(a) => {
                 let va = self.get_value(a);
                 self.registers[0] = self.pop();
                 self.pc = self.pop();

@@ -1,17 +1,7 @@
 use std::fmt::{self, Formatter, Display};
 
-/// check if nth bit is written and rewrite it to result
-/// start is value in range 0 to 15
-fn get_bits_in_range(word: u16, start: u8, length: u8) -> u16 {
-    let mut result: u16 = 0;
-    for n in start..(start+length) {
-        result |= ((word >> n) & 1) << (n - start);
-    }
-    result
-}
-
 #[derive(Debug)]
-pub enum Opcode {
+pub enum Instruction {
     SET(u8, u8),
     ADD(u8, u8),
     SUB(u8, u8),
@@ -49,108 +39,82 @@ pub enum Opcode {
     NULL
 }
 
-pub struct Instruction(pub u16);
-
-impl Instruction {
-    pub fn opcode(&self) -> Opcode {
-        let special = self.is_special();
-        let bits = match special {
-            false => get_bits_in_range(self.0, 0, 5) as u8,
-            true => get_bits_in_range(self.0, 5, 5) as u8
-        };
-        match (special, bits) {
-            (false, 0x1) => Opcode::SET(self.a(), self.b()),
-            (false, 0x2) => Opcode::ADD(self.a(), self.b()),
-            (false, 0x3) => Opcode::SUB(self.a(), self.b()),
-            (false, 0x4) => Opcode::MUL(self.a(), self.b()),
-            (false, 0x5) => Opcode::MLI(self.a(), self.b()),
-            (false, 0x6) => Opcode::DIV(self.a(), self.b()),
-            (false, 0x7) => Opcode::DVI(self.a(), self.b()),
-            (false, 0x8) => Opcode::MOD(self.a(), self.b()),
-            (false, 0x9) => Opcode::MDI(self.a(), self.b()),
-            (false, 0xa) => Opcode::AND(self.a(), self.b()),
-            (false, 0xb) => Opcode::BOR(self.a(), self.b()),
-            (false, 0xc) => Opcode::XOR(self.a(), self.b()),
-            (false, 0xd) => Opcode::SHR(self.a(), self.b()),
-            (false, 0xe) => Opcode::ASR(self.a(), self.b()),
-            (false, 0xf) => Opcode::SHL(self.a(), self.b()),
-            (false, 0x10) => Opcode::IFB(self.a(), self.b()),
-            (false, 0x11) => Opcode::IFC(self.a(), self.b()),
-            (false, 0x12) => Opcode::IFE(self.a(), self.b()),
-            (false, 0x13) => Opcode::IFN(self.a(), self.b()),
-            (false, 0x14) => Opcode::IFG(self.a(), self.b()),
-            (false, 0x15) => Opcode::IFA(self.a(), self.b()),
-            (false, 0x16) => Opcode::IFL(self.a(), self.b()),
-            (false, 0x17) => Opcode::IFU(self.a(), self.b()),
-            (false, 0x1a) => Opcode::ADX(self.a(), self.b()),
-            (false, 0x1b) => Opcode::SBX(self.a(), self.b()),
-            (false, 0x1e) => Opcode::STI(self.a(), self.b()),
-            (false, 0x1f) => Opcode::STD(self.a(), self.b()),
-            (true,  0x1) => Opcode::JSR(self.a()),
-            (true, 0x8) => Opcode::INT(self.a()),
-            (true, 0x9) => Opcode::IAG(self.a()),
-            (true, 0xa) => Opcode::IAS(self.a()),
-            (true, 0xb) => Opcode::RFI(self.a()),
-            _ => Opcode::NULL
-        }
-        //to_opcode(special, bits)
-    }
-
-    fn is_special(&self) -> bool {
-        get_bits_in_range(self.0, 0, 5) == 0
-    }
-
-    pub fn a(&self) -> u8 {
-        get_bits_in_range(self.0, 10, 6) as u8
-    }
-
-    pub fn b(&self) -> u8 {
-        match self.is_special() {
-            false => get_bits_in_range(self.0, 5, 5) as u8,
-            true => 0 // returning 0 is safer than returning some random opcode
-        }
-    }
-}
-
 impl Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.is_special() {
-            true => write!(f, "special, op: {:?}, a: 0x{:x}", self.opcode(), self.a()),
-            false => write!(f, "normal, op: {:?}, a: 0x{:x}, b: 0x{:x}", self.opcode(), self.a(), self.b())
-        }
+        write!(f, "{:?}", *self)
     }
 }
 
-#[test]
-fn test_is_special() {
-    let i = Instruction(0b000011_00001_00000);
-    let i2 = Instruction(0b000011_00001_00001);
-    assert_eq!(true, i.is_special());
-    assert_eq!(false, i2.is_special());
-}
+pub struct InstructionFactory;
 
-#[test]
-fn test_opcode() {
-    //let i = Instruction(0x7c01);
-    //let i2 = Instruction(0b000011_00001_00000);
-    //assert_eq!(Opcode::SET, i.opcode());
-    //assert_eq!(Opcode::SET, i2.opcode());
-}
+impl InstructionFactory {
+    pub fn new(word: &u16) -> Instruction {
+        let special = InstructionFactory::is_special(word);
+        let bits = match special {
+            false => InstructionFactory::get_bits_in_range(word, 0, 5) as u8,
+            true => InstructionFactory::get_bits_in_range(word, 5, 5) as u8
+        };
 
-#[test]
-fn test_a() {
-    let i = Instruction(0x7c01);
-    let i2 = Instruction(0b111111_00000_00001);
-    let i3 = Instruction(0xfc01);
-    assert_eq!(0b11111, i.a()); // 011111 = 1F = next word -> [PC++]
-    assert_eq!(0b111111, i2.a()); // 111111 = 
-    assert_eq!(0b111111, i3.a()); // 111111 = 
-}
+        let a = InstructionFactory::a(word);
+        let b = InstructionFactory::b(word);
 
-#[test]
-fn test_b() {
-    let i = Instruction(0x7c01);
-    let expected = 0b0u8; // 00000 = register A
-    assert_eq!(expected, i.b());
+        match (special, bits) {
+            (false, 0x1) => Instruction::SET(a, b),
+            (false, 0x2) => Instruction::ADD(a, b),
+            (false, 0x3) => Instruction::SUB(a, b),
+            (false, 0x4) => Instruction::MUL(a, b),
+            (false, 0x5) => Instruction::MLI(a, b),
+            (false, 0x6) => Instruction::DIV(a, b),
+            (false, 0x7) => Instruction::DVI(a, b),
+            (false, 0x8) => Instruction::MOD(a, b),
+            (false, 0x9) => Instruction::MDI(a, b),
+            (false, 0xa) => Instruction::AND(a, b),
+            (false, 0xb) => Instruction::BOR(a, b),
+            (false, 0xc) => Instruction::XOR(a, b),
+            (false, 0xd) => Instruction::SHR(a, b),
+            (false, 0xe) => Instruction::ASR(a, b),
+            (false, 0xf) => Instruction::SHL(a, b),
+            (false, 0x10) => Instruction::IFB(a, b),
+            (false, 0x11) => Instruction::IFC(a, b),
+            (false, 0x12) => Instruction::IFE(a, b),
+            (false, 0x13) => Instruction::IFN(a, b),
+            (false, 0x14) => Instruction::IFG(a, b),
+            (false, 0x15) => Instruction::IFA(a, b),
+            (false, 0x16) => Instruction::IFL(a, b),
+            (false, 0x17) => Instruction::IFU(a, b),
+            (false, 0x1a) => Instruction::ADX(a, b),
+            (false, 0x1b) => Instruction::SBX(a, b),
+            (false, 0x1e) => Instruction::STI(a, b),
+            (false, 0x1f) => Instruction::STD(a, b),
+            (true,  0x1) => Instruction::JSR(a),
+            (true, 0x8) => Instruction::INT(a),
+            (true, 0x9) => Instruction::IAG(a),
+            (true, 0xa) => Instruction::IAS(a),
+            (true, 0xb) => Instruction::RFI(a),
+            _ => Instruction::NULL
+        }
+    }
+
+    fn is_special(word: &u16) -> bool {
+        InstructionFactory::get_bits_in_range(word, 0, 5) == 0
+    }
+
+    fn a(word: &u16) -> u8 {
+        InstructionFactory::get_bits_in_range(word, 10, 6) as u8
+    }
+
+    fn b(word: &u16) -> u8 {
+        InstructionFactory::get_bits_in_range(word, 5, 5) as u8
+    }
+
+    /// check if nth bit is written and rewrite it to result
+    /// start is value in range 0 to 15
+    fn get_bits_in_range(word: &u16, start: u8, length: u8) -> u16 {
+        let mut result: u16 = 0;
+        for n in start..(start+length) {
+            result |= ((word >> n) & 1) << (n - start);
+        }
+        result
+    }
 }
 
