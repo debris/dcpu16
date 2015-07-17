@@ -1,6 +1,6 @@
 mod dcpu;
 
 fn main() {
-    let dcpu: dcpu::Dcpu = Default::default();
+    let dcpu: dcpu::Cpu = Default::default();
     println!("Hello, world!");
 }

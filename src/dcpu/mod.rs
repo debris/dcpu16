@@ -17,7 +17,7 @@ macro_rules! vec_with_size {
 
 type Value = u16;
 
-pub struct Dcpu {
+pub struct Cpu {
     memory: Memory,
     registers: Vec<Value>, // A - J
     cyc: Value,     // cycle
@@ -27,9 +27,9 @@ pub struct Dcpu {
     ia: Value       // interupt address
 }
 
-impl Default for Dcpu {
-    fn default() -> Dcpu {
-        Dcpu {
+impl Default for Cpu {
+    fn default() -> Cpu {
+        Cpu {
             memory: Default::default(),
             registers: vec_with_size!(8),
             cyc: 0,
@@ -41,8 +41,8 @@ impl Default for Dcpu {
     }
 }
 
-impl Dcpu {
-    fn load(&mut self, words: &[u16]) {
+impl Cpu {
+    pub fn load_program(&mut self, words: &[u16]) {
         self.memory.load(words);
     }
 
@@ -63,13 +63,13 @@ impl Dcpu {
         res
     }
 
-    fn run(&mut self) {
+    pub fn run(&mut self) {
         while self.memory.has_word_at(self.pc as usize) {
             self.run_step();
         }
     }
 
-    fn run_step(&mut self) {
+    pub fn run_step(&mut self) {
         let word = self.read_word();
         let i = Instruction(word);
         let a = i.a();
@@ -362,8 +362,8 @@ impl Dcpu {
 
 #[test]
 fn test_set() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0xfc01,        // SET A, 30
              0x7c21, 0x001f // SET B, 31
     ]);
@@ -375,8 +375,8 @@ fn test_set() {
 
 #[test]
 fn test_add() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0xfc01,    // SET A, 30
              0x8821,    // SET B, 1
              0x0022     // ADD B, A
@@ -390,8 +390,8 @@ fn test_add() {
 
 #[test]
 fn test_add_overflow() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x8001,    // SET A, 0xffff
              0x8c02     // ADD A, 2
     ]);
@@ -403,8 +403,8 @@ fn test_add_overflow() {
 
 #[test]
 fn test_sub() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x7c01, 0x0022,    // SET A, 34
              0x7c03, 0x001f     // SUB A, 31
     ]);
@@ -415,8 +415,8 @@ fn test_sub() {
 
 #[test]
 fn test_sub_underflow() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x8c01,    // SET A, 2
              0x9403     // SUB A, 4
     ]);
@@ -428,8 +428,8 @@ fn test_sub_underflow() {
 
 #[test]
 fn test_push_pop_peek() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x8f01,            // SET PUSH, 2
              0x7f01, 0x0023,    // SET PUSH, 35
              0x8b01,            // SET PUSH, 1
@@ -446,8 +446,8 @@ fn test_push_pop_peek() {
 
 #[test]
 fn test_registers() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0xaf01,    // SET PUSH, 10
              0x8001,    // SET A, 0xffff
              0x2021     // SET B, [A]
@@ -463,8 +463,8 @@ fn test_registers() {
 
 #[test]
 fn test_jsr() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x8801,    // SET A, 1
              0x8821,    // SET B, 1
              0x0422,    // ADD B, B
@@ -479,8 +479,8 @@ fn test_jsr() {
 
 #[test]
 fn test_mul() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0xc001,    // SET A, 15
              0x8c04     // MUL A, 2
     ]);
@@ -491,8 +491,8 @@ fn test_mul() {
 
 #[test]
 fn test_mul_overflow() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x9401,    // SET A, 4
              0x8004     // MUL A, 0xffff
     ]);
@@ -504,8 +504,8 @@ fn test_mul_overflow() {
 
 #[test]
 fn test_mli() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0xc001,    // SET A, 15
              0x8c05     // MLI A, 2
     ]);
@@ -516,8 +516,8 @@ fn test_mli() {
 
 #[test]
 fn test_mli_overflow() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x9401,    // SET A, 4
              0x8005     // MLI A, 0xffff
     ]);
@@ -529,8 +529,8 @@ fn test_mli_overflow() {
 
 #[test]
 fn test_div() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x9801,    // SET A, 5
              0x8c06     // DIV A, 2
     ]);
@@ -542,8 +542,8 @@ fn test_div() {
 
 #[test]
 fn test_dvi() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x9801,    // SET A, 5
              0x8c07     // DVI A, 2
     ]);
@@ -554,8 +554,8 @@ fn test_dvi() {
 
 #[test]
 fn test_dvi_signed() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x9801,            // SET A, 5
              0x7c07, 0xfffe     // DVI A, -2
     ]);
@@ -567,8 +567,8 @@ fn test_dvi_signed() {
 
 #[test]
 fn test_mod() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x9801,    // SET A, 5
              0x8c08     // MOD A, 2
     ]);
@@ -579,8 +579,8 @@ fn test_mod() {
 
 #[test]
 fn test_mdi() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x9801,    // SET A, 5
              0x8c09     // MDI A, 2
     ]);
@@ -591,8 +591,8 @@ fn test_mdi() {
 
 #[test]
 fn test_mdi_signed() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x7c01, 0xfff9,    // SET A, -7
              0xc409             // MDI A, 16
     ]);
@@ -603,8 +603,8 @@ fn test_mdi_signed() {
 
 #[test]
 fn test_and() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0xa001,    // SET A, 7
              0x980a     // AND A, 5
     ]);
@@ -615,8 +615,8 @@ fn test_and() {
 
 #[test]
 fn test_bor() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x9001,    // SET A, 3
              0x980b     // BOR A, 5
     ]);
@@ -627,8 +627,8 @@ fn test_bor() {
 
 #[test]
 fn test_xor() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x9001,    // SET A, 3
              0x980c     // XOR A, 5
     ]);
@@ -639,8 +639,8 @@ fn test_xor() {
 
 #[test]
 fn test_shr() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0xa001,    // SET A, 7
              0x880d     // SHR A, 1
     ]);
@@ -652,8 +652,8 @@ fn test_shr() {
 
 #[test]
 fn test_asr() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0xa001,    // SET A, 7
              0x880e     // ASR A, 1
     ]);
@@ -665,8 +665,8 @@ fn test_asr() {
 
 #[test]
 fn test_shl() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0xa001,    // SET A, 7
              0x880f     // SHL A, 1
     ]);
@@ -677,8 +677,8 @@ fn test_shl() {
 
 #[test]
 fn test_shl_ex() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0xa001,    // SET A, 7
              0xe40f     // SHL A, 24
     ]);
@@ -690,8 +690,8 @@ fn test_shl_ex() {
 
 #[test]
 fn test_ifb() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x8801,    // SET A, 1
              0x9010,    // IFB A, 3
              0x8c01,    // SET A, 2
@@ -706,8 +706,8 @@ fn test_ifb() {
 
 #[test]
 fn test_ifc() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x8801,    // SET A, 1
              0x9011,    // IFC A, 3
              0x8c01,    // SET A, 2
@@ -722,8 +722,8 @@ fn test_ifc() {
 
 #[test]
 fn test_ife() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x8801,    // SET A, 1
              0x8c12,    // IFE A, 2
              0x8c01,    // SET A, 2
@@ -738,8 +738,8 @@ fn test_ife() {
 
 #[test]
 fn test_ifn() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x8801,    // SET A, 1
              0x8c13,    // IFN A, 2
              0x8c01,    // SET A, 2
@@ -754,8 +754,8 @@ fn test_ifn() {
 
 #[test]
 fn test_ifg() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x8c01,    // SET A, 2
              0x8814,    // IFG A, 1
              0x8801,    // SET A, 1
@@ -770,8 +770,8 @@ fn test_ifg() {
 
 #[test]
 fn test_ifa() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x8c01,    // SET A, 2
              0x8815,    // IFA A, 1
              0x8801,    // SET A, 1
@@ -786,8 +786,8 @@ fn test_ifa() {
 
 #[test]
 fn test_ifl() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x8801,    // SET A, 1
              0x8c16,    // IFL A, 2
              0x8c01,    // SET A, 2
@@ -802,8 +802,8 @@ fn test_ifl() {
 
 #[test]
 fn test_ifu() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x8801,    // SET A, 1
              0x8c17,    // IFU A, 2
              0x8c01,    // SET A, 2
@@ -818,8 +818,8 @@ fn test_ifu() {
 
 #[test]
 fn test_sti() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0xc01e     // STI A, 15
     ]);
     cpu.run(); 
@@ -831,8 +831,8 @@ fn test_sti() {
 
 #[test]
 fn test_std() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0xc01f     // STD A, 15
     ]);
     cpu.run(); 
@@ -844,8 +844,8 @@ fn test_std() {
 
 #[test]
 fn test_int() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x9401,            // SET A, 4
              0x7d40, 0x0006,    // IAS 6
              0x7d00, 0x0008,    // INT 8
@@ -863,8 +863,8 @@ fn test_int() {
 
 #[test]
 fn test_rfi() {
-    let mut cpu: Dcpu = Default::default();
-    cpu.load(&[
+    let mut cpu: Cpu = Default::default();
+    cpu.load_program(&[
              0x9401,            // SET A, 4
              0x7d40, 0x0006,    // IAS 6
              0x7d00, 0x0008,    // INT 8
