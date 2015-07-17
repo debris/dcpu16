@@ -12,95 +12,92 @@ fn get_bits_in_range(word: u16, start: u8, length: u8) -> u16 {
 
 #[derive(Debug)]
 pub enum Opcode {
-    SET,
-    ADD,
-    SUB,
-    MUL,
-    MLI,
-    DIV,
-    DVI,
-    MOD,
-    MDI,
-    AND,
-    BOR,
-    XOR,
-    SHR,
-    ASR,
-    SHL,
-    IFB,
-    IFC,
-    IFE,
-    IFN,
-    IFG,
-    IFA,
-    IFL,
-    IFU,
-    ADX,
-    SBX,
-    STI,
-    STD,
+    SET(u8, u8),
+    ADD(u8, u8),
+    SUB(u8, u8),
+    MUL(u8, u8),
+    MLI(u8, u8),
+    DIV(u8, u8),
+    DVI(u8, u8),
+    MOD(u8, u8),
+    MDI(u8, u8),
+    AND(u8, u8),
+    BOR(u8, u8),
+    XOR(u8, u8),
+    SHR(u8, u8),
+    ASR(u8, u8),
+    SHL(u8, u8),
+    IFB(u8, u8),
+    IFC(u8, u8),
+    IFE(u8, u8),
+    IFN(u8, u8),
+    IFG(u8, u8),
+    IFA(u8, u8),
+    IFL(u8, u8),
+    IFU(u8, u8),
+    ADX(u8, u8),
+    SBX(u8, u8),
+    STI(u8, u8),
+    STD(u8, u8),
 
-    JSR,
-    INT,
-    IAG,
-    IAS,
-    RFI,
+    JSR(u8),
+    INT(u8),
+    IAG(u8),
+    IAS(u8),
+    RFI(u8),
 
     NULL
-}
-
-fn to_opcode(special: bool, bits: u8) -> Opcode {
-    match (special, bits) {
-        (false, 0x1) => Opcode::SET,
-        (false, 0x2) => Opcode::ADD,
-        (false, 0x3) => Opcode::SUB,
-        (false, 0x4) => Opcode::MUL,
-        (false, 0x5) => Opcode::MLI,
-        (false, 0x6) => Opcode::DIV,
-        (false, 0x7) => Opcode::DVI,
-        (false, 0x8) => Opcode::MOD,
-        (false, 0x9) => Opcode::MDI,
-        (false, 0xa) => Opcode::AND,
-        (false, 0xb) => Opcode::BOR,
-        (false, 0xc) => Opcode::XOR,
-        (false, 0xd) => Opcode::SHR,
-        (false, 0xe) => Opcode::ASR,
-        (false, 0xf) => Opcode::SHL,
-        (false, 0x10) => Opcode::IFB,
-        (false, 0x11) => Opcode::IFC,
-        (false, 0x12) => Opcode::IFE,
-        (false, 0x13) => Opcode::IFN,
-        (false, 0x14) => Opcode::IFG,
-        (false, 0x15) => Opcode::IFA,
-        (false, 0x16) => Opcode::IFL,
-        (false, 0x17) => Opcode::IFU,
-        (false, 0x1a) => Opcode::ADX,
-        (false, 0x1b) => Opcode::SBX,
-        (false, 0x1e) => Opcode::STI,
-        (false, 0x1f) => Opcode::STD,
-        (true,  0x1) => Opcode::JSR,
-        (true, 0x8) => Opcode::INT,
-        (true, 0x9) => Opcode::IAG,
-        (true, 0xa) => Opcode::IAS,
-        (true, 0xb) => Opcode::RFI,
-        _ => Opcode::NULL
-    }
 }
 
 pub struct Instruction(pub u16);
 
 impl Instruction {
-    pub fn is_special(&self) -> bool {
-        get_bits_in_range(self.0, 0, 5) == 0
-    }
-
     pub fn opcode(&self) -> Opcode {
         let special = self.is_special();
         let bits = match special {
             false => get_bits_in_range(self.0, 0, 5) as u8,
             true => get_bits_in_range(self.0, 5, 5) as u8
         };
-        to_opcode(special, bits)
+        match (special, bits) {
+            (false, 0x1) => Opcode::SET(self.a(), self.b()),
+            (false, 0x2) => Opcode::ADD(self.a(), self.b()),
+            (false, 0x3) => Opcode::SUB(self.a(), self.b()),
+            (false, 0x4) => Opcode::MUL(self.a(), self.b()),
+            (false, 0x5) => Opcode::MLI(self.a(), self.b()),
+            (false, 0x6) => Opcode::DIV(self.a(), self.b()),
+            (false, 0x7) => Opcode::DVI(self.a(), self.b()),
+            (false, 0x8) => Opcode::MOD(self.a(), self.b()),
+            (false, 0x9) => Opcode::MDI(self.a(), self.b()),
+            (false, 0xa) => Opcode::AND(self.a(), self.b()),
+            (false, 0xb) => Opcode::BOR(self.a(), self.b()),
+            (false, 0xc) => Opcode::XOR(self.a(), self.b()),
+            (false, 0xd) => Opcode::SHR(self.a(), self.b()),
+            (false, 0xe) => Opcode::ASR(self.a(), self.b()),
+            (false, 0xf) => Opcode::SHL(self.a(), self.b()),
+            (false, 0x10) => Opcode::IFB(self.a(), self.b()),
+            (false, 0x11) => Opcode::IFC(self.a(), self.b()),
+            (false, 0x12) => Opcode::IFE(self.a(), self.b()),
+            (false, 0x13) => Opcode::IFN(self.a(), self.b()),
+            (false, 0x14) => Opcode::IFG(self.a(), self.b()),
+            (false, 0x15) => Opcode::IFA(self.a(), self.b()),
+            (false, 0x16) => Opcode::IFL(self.a(), self.b()),
+            (false, 0x17) => Opcode::IFU(self.a(), self.b()),
+            (false, 0x1a) => Opcode::ADX(self.a(), self.b()),
+            (false, 0x1b) => Opcode::SBX(self.a(), self.b()),
+            (false, 0x1e) => Opcode::STI(self.a(), self.b()),
+            (false, 0x1f) => Opcode::STD(self.a(), self.b()),
+            (true,  0x1) => Opcode::JSR(self.a()),
+            (true, 0x8) => Opcode::INT(self.a()),
+            (true, 0x9) => Opcode::IAG(self.a()),
+            (true, 0xa) => Opcode::IAS(self.a()),
+            (true, 0xb) => Opcode::RFI(self.a()),
+            _ => Opcode::NULL
+        }
+        //to_opcode(special, bits)
+    }
+
+    fn is_special(&self) -> bool {
+        get_bits_in_range(self.0, 0, 5) == 0
     }
 
     pub fn a(&self) -> u8 {
