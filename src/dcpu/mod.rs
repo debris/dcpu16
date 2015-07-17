@@ -5,33 +5,21 @@ use self::memory::Memory as Memory;
 use self::instruction::Instruction as Instruction;
 use self::instruction::Opcode as Opcode;
 
-macro_rules! vec_with_size {
-    ($size: expr) => ({
-        let mut v = Vec::new(); 
-        for _i in 0..$size {
-            v.push(0);
-        }
-        v
-    })
-}
-
-type Value = u16;
-
 pub struct Cpu {
     memory: Memory,
-    registers: Vec<Value>, // A - J
-    cyc: Value,     // cycle
-    pc: Value,      // program_counter
-    sp: Value,      // stack_pointer
-    ex: Value,      // extra
-    ia: Value       // interupt address
+    registers: [u16; 8], // A - J
+    cyc: u16,     // cycle
+    pc: u16,      // program_counter
+    sp: u16,      // stack_pointer
+    ex: u16,      // extra
+    ia: u16       // interupt address
 }
 
 impl Default for Cpu {
     fn default() -> Cpu {
         Cpu {
             memory: Default::default(),
-            registers: vec_with_size!(8),
+            registers: [0; 8],
             cyc: 0,
             pc: 0,
             sp: 0,
@@ -322,36 +310,36 @@ impl Cpu {
         }
     }
 
-    fn get_value(&mut self, addr: u8) -> Value {
+    fn get_value(&mut self, addr: u8) -> u16 {
         match addr {
             n @ 0x0 ... 0x7 => self.registers[n as usize],
             n @ 0x8 ... 0xf => self.memory.get(self.registers[(n - 0x8) as usize] as usize),
             n @ 0x10 ... 0x17 => {
                 let v = self.memory.get(self.registers[(n - 0x10) as usize] as usize);
                 let word = self.read_word();
-                self.memory.get(v.wrapping_add(word) as usize) as Value
+                self.memory.get(v.wrapping_add(word) as usize)
             },
             0x18 => self.pop(),
             0x19 => self.memory.get(self.sp as usize), // peek
             0x1a => {
                 let sp = self.sp;
                 let word = self.read_word();
-                self.memory.get(sp.wrapping_add(word) as usize) as Value
+                self.memory.get(sp.wrapping_add(word) as usize)
             },
             0x1b => self.sp,
             0x1c => self.pc,
             0x1d => self.ex,
             0x1e => {                                   // TODO: test
                 let word = self.read_word() as usize;
-                self.memory.get(word) as Value
+                self.memory.get(word)
             },
-            0x1f => self.read_word() as Value,
-            n @ 0x20 ... 0x3f => ((n as Value).wrapping_sub(0x21)),
+            0x1f => self.read_word(),
+            n @ 0x20 ... 0x3f => ((n as u16).wrapping_sub(0x21)),
             _ => panic!()
         }
     }
 
-    fn set_value(&mut self, addr: u8, value: Value) {
+    fn set_value(&mut self, addr: u8, value: u16) {
         match addr {
             n @ 0x0 ... 0x7 => self.registers[n as usize] = value,
             0x18 => self.push(value),
