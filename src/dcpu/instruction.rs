@@ -50,15 +50,11 @@ pub struct InstructionFactory;
 impl InstructionFactory {
     pub fn new(word: &u16) -> Instruction {
         let special = InstructionFactory::is_special(word);
-        let bits = match special {
-            false => InstructionFactory::get_bits_in_range(word, 0, 5) as u8,
-            true => InstructionFactory::get_bits_in_range(word, 5, 5) as u8
-        };
-
+        let opcode = InstructionFactory::opcode(word);
         let a = InstructionFactory::a(word);
         let b = InstructionFactory::b(word);
 
-        match (special, bits) {
+        match (special, opcode) {
             (false, 0x1) => Instruction::SET(a, b),
             (false, 0x2) => Instruction::ADD(a, b),
             (false, 0x3) => Instruction::SUB(a, b),
@@ -105,6 +101,13 @@ impl InstructionFactory {
 
     fn b(word: &u16) -> u8 {
         InstructionFactory::get_bits_in_range(word, 5, 5) as u8
+    }
+
+    fn opcode(word: &u16) -> u8 {
+        match InstructionFactory::is_special(word) {
+            false => InstructionFactory::get_bits_in_range(word, 0, 5) as u8,
+            true => InstructionFactory::get_bits_in_range(word, 5, 5) as u8
+        }
     }
 
     /// check if nth bit is written and rewrite it to result
