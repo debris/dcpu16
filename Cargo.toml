@@ -2,3 +2,6 @@
 name = "dcpu16"
 version = "0.1.0"
 authors = ["Marek Kotewicz <marek.kotewicz@gmail.com>"]
+
+[dependencies]
+matches = "0.1.2"
