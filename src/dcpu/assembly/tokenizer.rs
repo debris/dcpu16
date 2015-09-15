@@ -1,4 +1,4 @@
-trait Bits {
+pub trait Bits {
     fn to_bits(&self) -> u8;
 }
 
@@ -75,7 +75,7 @@ impl<'a> Bits for Value<'a> {
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-enum Token<'a> {
+pub enum Token<'a> {
     Opcode(Opcode),
     Value(Value<'a>),
     Whitespace,
@@ -187,7 +187,7 @@ impl<'a> Tokenizer<'a> {
         let slice = self.slice_from(start_position);
         match u16::from_str_radix(slice, radix) {
             Ok(v) => Token::Value(Value::Number(v)),
-            Err(err) => Token::Invalid("parse error", start_position)
+            Err(err) => Token::Invalid(slice, start_position)
         }
     }
 
@@ -226,7 +226,7 @@ impl<'a> Tokenizer<'a> {
     }
 }
 
-struct LookaheadTokenizer<'a> {
+pub struct LookaheadTokenizer<'a> {
     tokenizer: Tokenizer<'a>,
     cache: Vec<Option<Token<'a>>>
 }
@@ -239,7 +239,7 @@ impl<'a> LookaheadTokenizer<'a> {
         }
     }
 
-    fn token_at(&mut self, position: usize) -> Option<Token<'a>> {
+    pub fn token_at(&mut self, position: usize) -> Option<Token<'a>> {
         self.load_until(position);
         self.cache[position]
     }
@@ -251,99 +251,11 @@ impl<'a> LookaheadTokenizer<'a> {
     }
 
     #[inline]
-    fn advance(&mut self, n: usize) {
+    pub fn advance(&mut self, n: usize) {
         for i in 0..n {
             self.cache.remove(0);
         }
     }
-}
-
-pub struct Parser<'a> {
-    tokenizer: LookaheadTokenizer<'a>
-}
-
-impl<'a> Parser<'a> {
-    pub fn new(source: &str) -> Parser {
-        Parser {
-            tokenizer: LookaheadTokenizer::new(source)
-        }
-    }
-
-    fn skip_whitesigns(&mut self) {
-        while matches!(self.tokenizer.token_at(0), Some(Token::Whitespace) | Some(Token::Endline)) {
-            self.tokenizer.advance(1);
-        }
-    }
-
-    fn is_opcode(&mut self, n: usize) -> bool {
-        matches!(self.tokenizer.token_at(n), Some(Token::Opcode(ref op)))
-    }
-
-    fn is_whitespace(&mut self, n: usize) -> bool {
-        matches!(self.tokenizer.token_at(n), Some(Token::Whitespace))
-    }
-
-    fn is_value(&mut self, n: usize) -> bool {
-        matches!(self.tokenizer.token_at(n), Some(Token::Value(ref a)))
-    }
-    
-    fn is_comma(&mut self, n: usize) -> bool {
-        matches!(self.tokenizer.token_at(n), Some(Token::Comma))
-    }
-
-    fn parse_expression(&mut self) -> u16 {
-        if (self.is_opcode(0) &&
-            self.is_whitespace(1) &&
-            self.is_value(2) &&
-            self.is_comma(3) &&
-            self.is_whitespace(4) &&
-            self.is_value(5)) {
-            let op = self.tokenizer.token_at(0).unwrap().to_bits() as u16;
-            let b = self.tokenizer.token_at(2).unwrap().to_bits() as u16;
-            let a = self.tokenizer.token_at(5).unwrap().to_bits() as u16;
-            self.tokenizer.advance(6);
-            return op + (b << 5) + (a << 10);
-        }
-        panic!()
-    }
-
-    pub fn parse(&mut self) -> Vec<u16> {
-        let mut result = vec!();
-        self.skip_whitesigns();
-        while self.tokenizer.token_at(0).is_some() {
-            result.push(self.parse_expression());
-            self.skip_whitesigns();
-        }
-        result
-    }
-}
-
-#[test]
-fn test_parse_expression() {
-    let mut parser = Parser::new("SET A, 30");
-    assert_eq!(parser.parse_expression(), 0xfc01);
-}
-
-#[test]
-fn test_parse() {
-    let mut parser = Parser::new("SET A, 30");
-    assert_eq!(parser.parse(), [0xfc01]);
-}
-
-#[test]
-fn test_parse2() {
-    let mut parser = Parser::new("\nSET   A,  30\n\n");
-    assert_eq!(parser.parse(), [0xfc01]);
-}
-
-#[test]
-fn test_parse3() {
-    let mut parser = Parser::new("SET A, 30\n
-                                  SET A, 1");
-    assert_eq!(parser.parse(), [
-               0xfc01, // SET A, 30
-               0x8801  // SET A, 1
-    ]);
 }
 
 #[test]

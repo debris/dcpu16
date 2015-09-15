@@ -31,9 +31,9 @@ impl Cpu {
         Cpu::default()
     }
 
-    pub fn registers(&self) -> [u16; 8] {
-        self.registers
-    }
+    pub fn A(&self) -> u16 { self.registers[0] }
+    pub fn B(&self) -> u16 { self.registers[1] }
+    pub fn C(&self) -> u16 { self.registers[2] }
 
     pub fn load_program(&mut self, words: &[u16]) {
         self.memory.load(words);

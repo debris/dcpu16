@@ -1,2 +1,3 @@
 #![feature(slice_patterns)]
-pub mod tokenizer;
+mod tokenizer;
+pub mod parser;
