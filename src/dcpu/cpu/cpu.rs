@@ -27,6 +27,14 @@ impl Default for Cpu {
 }
 
 impl Cpu {
+    pub fn new() -> Cpu {
+        Cpu::default()
+    }
+
+    pub fn registers(&self) -> [u16; 8] {
+        self.registers
+    }
+
     pub fn load_program(&mut self, words: &[u16]) {
         self.memory.load(words);
     }

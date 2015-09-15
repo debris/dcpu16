@@ -5,27 +5,54 @@ trait Bits {
 #[derive(Debug, PartialEq, Copy, Clone)]
 enum Opcode {
     SET,
-    ADD
+    ADD,
+    SUB,
+    MUL,
+    MLI,
+    DIV,
+    DVI,
+    MOD,
+    MDI,
+    AND,
+    BOR,
+    XOR
 }
 
 impl Bits for Opcode {
     fn to_bits(&self) -> u8 {
         match *self {
             Opcode::SET => 0x01,
-            Opcode::ADD => 0x02
+            Opcode::ADD => 0x02,
+            Opcode::SUB => 0x03,
+            Opcode::MUL => 0x04,
+            Opcode::MLI => 0x05,
+            Opcode::DIV => 0x06,
+            Opcode::DVI => 0x07,
+            Opcode::MOD => 0x08,
+            Opcode::MDI => 0x09,
+            Opcode::AND => 0x0a,
+            Opcode::BOR => 0x0b,
+            Opcode::XOR => 0x0c
         }
     }
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 enum Constant {
-    A
+    A, B, C, X, Y, Z, I, J
 }
 
 impl Bits for Constant {
     fn to_bits(&self) -> u8 {
         match *self {
-            Constant::A => 0
+            Constant::A => 0x0,
+            Constant::B => 0x1,
+            Constant::C => 0x2,
+            Constant::X => 0x3,
+            Constant::Y => 0x4,
+            Constant::Z => 0x5,
+            Constant::I => 0x6,
+            Constant::J => 0x7,
         }
     }
 }
@@ -175,8 +202,25 @@ impl<'a> Tokenizer<'a> {
         let slice = self.slice_from(start_position);
         match slice {
             "A" | "a" => Token::Value(Value::Constant(Constant::A)),
+            "B" | "b" => Token::Value(Value::Constant(Constant::B)),
+            "C" | "c" => Token::Value(Value::Constant(Constant::C)),
+            "X" | "x" => Token::Value(Value::Constant(Constant::X)),
+            "Y" | "y" => Token::Value(Value::Constant(Constant::Y)),
+            "Z" | "z" => Token::Value(Value::Constant(Constant::Z)),
+            "I" | "i" => Token::Value(Value::Constant(Constant::I)),
+            "J" | "j" => Token::Value(Value::Constant(Constant::J)),
             "SET" | "set" => Token::Opcode(Opcode::SET),
             "ADD" | "add" => Token::Opcode(Opcode::ADD),
+            "SUB" | "sub" => Token::Opcode(Opcode::SUB),
+            "MUL" | "mul" => Token::Opcode(Opcode::MUL),
+            "MLI" | "mli" => Token::Opcode(Opcode::MLI),
+            "DIV" | "div" => Token::Opcode(Opcode::DIV),
+            "DVI" | "dvi" => Token::Opcode(Opcode::DVI),
+            "MOD" | "mod" => Token::Opcode(Opcode::MOD),
+            "MDI" | "mdi" => Token::Opcode(Opcode::MDI),
+            "AND" | "and" => Token::Opcode(Opcode::AND),
+            "BOR" | "bor" => Token::Opcode(Opcode::BOR),
+            "XOR" | "xor" => Token::Opcode(Opcode::XOR),
             n @ _ => Token::Invalid(n, start_position)
         }
     }
@@ -214,7 +258,7 @@ impl<'a> LookaheadTokenizer<'a> {
     }
 }
 
-struct Parser<'a> {
+pub struct Parser<'a> {
     tokenizer: LookaheadTokenizer<'a>
 }
 
@@ -247,7 +291,7 @@ impl<'a> Parser<'a> {
         matches!(self.tokenizer.token_at(n), Some(Token::Comma))
     }
 
-    fn next_expression(&mut self) -> u16 {
+    fn parse_expression(&mut self) -> u16 {
         if (self.is_opcode(0) &&
             self.is_whitespace(1) &&
             self.is_value(2) &&
@@ -262,12 +306,44 @@ impl<'a> Parser<'a> {
         }
         panic!()
     }
+
+    pub fn parse(&mut self) -> Vec<u16> {
+        let mut result = vec!();
+        self.skip_whitesigns();
+        while self.tokenizer.token_at(0).is_some() {
+            result.push(self.parse_expression());
+            self.skip_whitesigns();
+        }
+        result
+    }
 }
 
 #[test]
-fn test_parser() {
+fn test_parse_expression() {
     let mut parser = Parser::new("SET A, 30");
-    assert_eq!(parser.next_expression(), 0xfc01);
+    assert_eq!(parser.parse_expression(), 0xfc01);
+}
+
+#[test]
+fn test_parse() {
+    let mut parser = Parser::new("SET A, 30");
+    assert_eq!(parser.parse(), [0xfc01]);
+}
+
+#[test]
+fn test_parse2() {
+    let mut parser = Parser::new("\nSET   A,  30\n\n");
+    assert_eq!(parser.parse(), [0xfc01]);
+}
+
+#[test]
+fn test_parse3() {
+    let mut parser = Parser::new("SET A, 30\n
+                                  SET A, 1");
+    assert_eq!(parser.parse(), [
+               0xfc01, // SET A, 30
+               0x8801  // SET A, 1
+    ]);
 }
 
 #[test]
