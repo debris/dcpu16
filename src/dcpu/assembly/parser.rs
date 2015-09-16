@@ -57,7 +57,16 @@ impl<'a> Parser<'a> {
             self.tokenizer.advance(6);
             return op + (b << 5) + (a << 10);
         }
-        panic!()
+
+        if (self.is_opcode(0) &&
+            self.is_whitespace(1) &&
+            self.is_value(2)) {
+            let op = self.bits_at(0);
+            let a = self.bits_at(2);
+            self.tokenizer.advance(3);
+            return (op << 5) + (a << 10);
+        }
+        panic!();
     }
 
     pub fn parse(&mut self) -> Vec<u16> {

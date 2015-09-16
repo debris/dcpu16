@@ -34,6 +34,11 @@ impl Cpu {
     pub fn A(&self) -> u16 { self.registers[0] }
     pub fn B(&self) -> u16 { self.registers[1] }
     pub fn C(&self) -> u16 { self.registers[2] }
+    pub fn X(&self) -> u16 { self.registers[3] }
+    pub fn Y(&self) -> u16 { self.registers[4] }
+    pub fn Z(&self) -> u16 { self.registers[5] }
+    pub fn I(&self) -> u16 { self.registers[6] }
+    pub fn J(&self) -> u16 { self.registers[7] }
 
     pub fn load_program(&mut self, words: &[u16]) {
         self.memory.load(words);
