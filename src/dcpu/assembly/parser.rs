@@ -1,11 +1,7 @@
+#![allow(dead_code)]
 use super::tokenizer::Token as Token;
 use super::tokenizer::Bits as Bits;
 use super::tokenizer::LookaheadTokenizer as LookaheadTokenizer;
-
-//struct ParseError<'a> {
-    //string: &'a str,
-    //position: usize
-//}
 
 pub struct Parser<'a> {
     tokenizer: LookaheadTokenizer<'a>
@@ -25,7 +21,7 @@ impl<'a> Parser<'a> {
     }
 
     fn is_opcode(&mut self, n: usize) -> bool {
-        matches!(self.tokenizer.token_at(n), Some(Token::Opcode(ref op)))
+        matches!(self.tokenizer.token_at(n), Some(Token::Opcode(ref _op)))
     }
 
     fn is_whitespace(&mut self, n: usize) -> bool {
@@ -33,7 +29,7 @@ impl<'a> Parser<'a> {
     }
 
     fn is_value(&mut self, n: usize) -> bool {
-        matches!(self.tokenizer.token_at(n), Some(Token::Value(ref a)))
+        matches!(self.tokenizer.token_at(n), Some(Token::Value(ref _a)))
     }
     
     fn is_comma(&mut self, n: usize) -> bool {
@@ -45,12 +41,12 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self) -> u16 {
-        if (self.is_opcode(0) &&
+        if  self.is_opcode(0) &&
             self.is_whitespace(1) &&
             self.is_value(2) &&
             self.is_comma(3) &&
             self.is_whitespace(4) &&
-            self.is_value(5)) {
+            self.is_value(5) {
             let op = self.bits_at(0);
             let b = self.bits_at(2);
             let a = self.bits_at(5);
@@ -58,9 +54,9 @@ impl<'a> Parser<'a> {
             return op + (b << 5) + (a << 10);
         }
 
-        if (self.is_opcode(0) &&
+        if  self.is_opcode(0) &&
             self.is_whitespace(1) &&
-            self.is_value(2)) {
+            self.is_value(2) {
             let op = self.bits_at(0);
             let a = self.bits_at(2);
             self.tokenizer.advance(3);

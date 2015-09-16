@@ -8,8 +8,8 @@ fn test_set() {
     let mut cpu = Cpu::new();
     cpu.load_program(&parser.parse());
     cpu.run();
-    assert_eq!(cpu.A(), 30);
-    assert_eq!(cpu.B(), 1);
+    assert_eq!(cpu.a(), 30);
+    assert_eq!(cpu.b(), 1);
 }
 
 #[test]
@@ -20,8 +20,8 @@ fn test_add() {
     let mut cpu = Cpu::new();
     cpu.load_program(&parser.parse());
     cpu.run();
-    assert_eq!(cpu.A(), 30);
-    assert_eq!(cpu.B(), 31);
+    assert_eq!(cpu.a(), 30);
+    assert_eq!(cpu.b(), 31);
 }
 
 #[test]
@@ -32,8 +32,8 @@ fn test_mul() {
     let mut cpu = Cpu::new();
     cpu.load_program(&parser.parse());
     cpu.run();
-    assert_eq!(cpu.A(), 30);
-    assert_eq!(cpu.B(), 60);
+    assert_eq!(cpu.a(), 30);
+    assert_eq!(cpu.b(), 60);
 }
 
 #[test]
@@ -43,7 +43,7 @@ fn test_div() {
     let mut cpu = Cpu::new();
     cpu.load_program(&parser.parse());
     cpu.run();
-    assert_eq!(cpu.A(), 2);
+    assert_eq!(cpu.a(), 2);
 }
 
 #[test]
@@ -52,8 +52,8 @@ fn test_sti() {
     let mut cpu = Cpu::new();
     cpu.load_program(&parser.parse());
     cpu.run();
-    assert_eq!(cpu.A(), 15);
-    assert_eq!(cpu.I(), 1);
-    assert_eq!(cpu.J(), 1);
+    assert_eq!(cpu.a(), 15);
+    assert_eq!(cpu.i(), 1);
+    assert_eq!(cpu.j(), 1);
 }
 

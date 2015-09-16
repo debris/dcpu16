@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use super::memory::Memory as Memory;
 use super::instruction::InstructionFactory as InstructionFactory;
 use super::instruction::Instruction as Instruction;
@@ -31,14 +32,14 @@ impl Cpu {
         Cpu::default()
     }
 
-    pub fn A(&self) -> u16 { self.registers[0] }
-    pub fn B(&self) -> u16 { self.registers[1] }
-    pub fn C(&self) -> u16 { self.registers[2] }
-    pub fn X(&self) -> u16 { self.registers[3] }
-    pub fn Y(&self) -> u16 { self.registers[4] }
-    pub fn Z(&self) -> u16 { self.registers[5] }
-    pub fn I(&self) -> u16 { self.registers[6] }
-    pub fn J(&self) -> u16 { self.registers[7] }
+    pub fn a(&self) -> u16 { self.registers[0] }
+    pub fn b(&self) -> u16 { self.registers[1] }
+    pub fn c(&self) -> u16 { self.registers[2] }
+    pub fn x(&self) -> u16 { self.registers[3] }
+    pub fn y(&self) -> u16 { self.registers[4] }
+    pub fn z(&self) -> u16 { self.registers[5] }
+    pub fn i(&self) -> u16 { self.registers[6] }
+    pub fn j(&self) -> u16 { self.registers[7] }
 
     pub fn load_program(&mut self, words: &[u16]) {
         self.memory.load(words);
@@ -306,7 +307,7 @@ impl Cpu {
                 self.ia = va;
             },
             Instruction::RFI(a) => {
-                let va = self.get_value(a);
+                let _va = self.get_value(a);
                 self.registers[0] = self.pop();
                 self.pc = self.pop();
 

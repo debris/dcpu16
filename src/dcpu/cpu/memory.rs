@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub struct Memory {
     memory: [u16; 0x10000],
     loaded: usize             // how many words are loaded at the beginning of the memory

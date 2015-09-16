@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub trait Bits {
     fn to_bits(&self) -> u8;
 }
@@ -214,7 +215,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn consume_whitespace(&mut self) -> Token<'a> {
-        let mut start_position = self.position;
+        let _start_position = self.position;
         while !self.is_eof() {
             match self.next_char() {
                 '\t' | ' ' | '\r' | '\x0C' => self.advance(1),
@@ -225,7 +226,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn consume_number(&mut self, radix: u32) -> Token<'a> {
-        let mut start_position = self.position;
+        let start_position = self.position;
         while !self.is_eof() {
             match self.next_char() {
                 '0'...'9' => self.advance(1),
@@ -236,12 +237,12 @@ impl<'a> Tokenizer<'a> {
         let slice = self.slice_from(start_position);
         match u16::from_str_radix(slice, radix) {
             Ok(v) => Token::Value(Value::Number(v)),
-            Err(err) => Token::Invalid(slice, start_position)
+            Err(_err) => Token::Invalid(slice, start_position)
         }
     }
 
     fn consume_word(&mut self) -> Token<'a> {
-        let mut start_position = self.position;
+        let start_position = self.position;
         while !self.is_eof() {
             match self.next_char() {
                 'a'...'z' | 'A'...'Z' | '0'...'9' | '_' => self.advance(1),
@@ -326,7 +327,7 @@ impl<'a> LookaheadTokenizer<'a> {
 
     #[inline]
     pub fn advance(&mut self, n: usize) {
-        for i in 0..n {
+        for _i in 0..n {
             self.cache.remove(0);
         }
     }

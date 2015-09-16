@@ -5,6 +5,6 @@ mod dcpu;
 use dcpu::cpu::cpu::Cpu as Cpu;
 
 fn main() {
-    let cpu = Cpu::new();
+    let _cpu = Cpu::new();
     println!("Hello, world!");
 }
